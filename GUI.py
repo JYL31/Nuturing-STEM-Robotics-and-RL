@@ -6,6 +6,7 @@ Created on Thu Dec 22 11:53:18 2022
 """
 
 import tkinter as tk
+import customtkinter as ctk
 import gym
 import numpy as np
 from Agent import DQN_Agent
@@ -21,7 +22,6 @@ class display:
         self.container = root
         self.container.title("Basic GUI Layout with Grid")
         self.container.maxsize(1500,  800)
-        self.container.config(bg="light blue")
         self.fig = fig
 
     def setup(self):
@@ -29,71 +29,71 @@ class display:
         self.setup_layout()  
 
     def create_widgets(self):
-        self.leftFrame = tk.Frame(self.container, width=100, height=780, bg='white')
-        self.midFrame = tk.Frame(self.container, width=300, height=780, bg='white')
-        self.rightFrame = tk.Frame(self.container, width=400, height=800, bg='white')
-        self.rightFrame1 = tk.Frame(self.rightFrame, width=400, height=390, bg='white')
-        self.rightFrame2 = tk.Frame(self.rightFrame, width=400, height=390, bg='white')
+        self.leftFrame = ctk.CTkFrame(self.container, width=100, height=780)
+        self.midFrame = ctk.CTkFrame(self.container, width=300, height=780)
+        self.rightFrame = ctk.CTkFrame(self.container, width=400, height=800)
+        self.rightFrame1 = ctk.CTkFrame(self.rightFrame, width=400, height=390)
+        self.rightFrame2 = ctk.CTkFrame(self.rightFrame, width=400, height=390)
         
-        self.label_exr = tk.Label(self.leftFrame, text='exploration rate : ')
+        self.label_exr = ctk.CTkLabel(self.leftFrame, text='exploration rate : ')
         self.var_exr = tk.DoubleVar(value=1)
-        self.rb_exr1 = tk.Radiobutton(self.leftFrame, text='1', variable=self.var_exr, value=1, bg='white')
-        self.rb_exr2 = tk.Radiobutton(self.leftFrame, text='0.5', variable=self.var_exr, value=0.5, bg='white')
-        self.rb_exr3 = tk.Radiobutton(self.leftFrame, text='0.1', variable=self.var_exr, value=0.1, bg='white')
+        self.rb_exr1 = ctk.CTkRadioButton(self.leftFrame, text='1', variable=self.var_exr, value=1)
+        self.rb_exr2 = ctk.CTkRadioButton(self.leftFrame, text='0.5', variable=self.var_exr, value=0.5)
+        self.rb_exr3 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_exr, value=0.1)
 
-        self.label_exd = tk.Label(self.leftFrame, text='exploration decay : ')
+        self.label_exd = ctk.CTkLabel(self.leftFrame, text='exploration decay : ')
         self.var_exd = tk.DoubleVar(value=0.999)
-        self.rb_exd1 = tk.Radiobutton(self.leftFrame, text='0.999', variable=self.var_exd, value=0.999, bg='white')
-        self.rb_exd2 = tk.Radiobutton(self.leftFrame, text='0.5', variable=self.var_exd, value=0.5, bg='white')
-        self.rb_exd3 = tk.Radiobutton(self.leftFrame, text='0.1', variable=self.var_exd, value=0.1, bg='white')
+        self.rb_exd1 = ctk.CTkRadioButton(self.leftFrame, text='0.999', variable=self.var_exd, value=0.999)
+        self.rb_exd2 = ctk.CTkRadioButton(self.leftFrame, text='0.5', variable=self.var_exd, value=0.5)
+        self.rb_exd3 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_exd, value=0.1)
         
-        self.label_lr = tk.Label(self.leftFrame, text='learning rate : ')
+        self.label_lr = ctk.CTkLabel(self.leftFrame, text='learning rate : ')
         self.var_lr = tk.DoubleVar(value=0.001)
-        self.rb_lr1 = tk.Radiobutton(self.leftFrame, text='0.001', variable=self.var_lr, value=0.001, bg='white')
-        self.rb_lr2 = tk.Radiobutton(self.leftFrame, text='0.01', variable=self.var_lr, value=0.01, bg='white')
-        self.rb_lr3 = tk.Radiobutton(self.leftFrame, text='0.1', variable=self.var_lr, value=0.1, bg='white')
+        self.rb_lr1 = ctk.CTkRadioButton(self.leftFrame, text='0.001', variable=self.var_lr, value=0.001)
+        self.rb_lr2 = ctk.CTkRadioButton(self.leftFrame, text='0.01', variable=self.var_lr, value=0.01)
+        self.rb_lr3 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_lr, value=0.1)
         
-        self.label_df = tk.Label(self.leftFrame, text='discount factor : ')
+        self.label_df = ctk.CTkLabel(self.leftFrame, text='discount factor : ')
         self.var_df = tk.DoubleVar(value=0.95)
-        self.rb_df1 = tk.Radiobutton(self.leftFrame, text='0.95', variable=self.var_df, value=0.95, bg='white')
-        self.rb_df2 = tk.Radiobutton(self.leftFrame, text='0.5', variable=self.var_df, value=0.5, bg='white')
-        self.rb_df3 = tk.Radiobutton(self.leftFrame, text='0.1', variable=self.var_df, value=0.1, bg='white')
+        self.rb_df1 = ctk.CTkRadioButton(self.leftFrame, text='0.95', variable=self.var_df, value=0.95)
+        self.rb_df2 = ctk.CTkRadioButton(self.leftFrame, text='0.5', variable=self.var_df, value=0.5)
+        self.rb_df3 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_df, value=0.1)
         
-        self.label_mem = tk.Label(self.leftFrame, text='memory size : ')
+        self.label_mem = ctk.CTkLabel(self.leftFrame, text='memory size : ')
         self.var_mem = tk.IntVar(value=2000)
-        self.rb_mem1 = tk.Radiobutton(self.leftFrame, text='2000', variable=self.var_mem, value=2000, bg='white')
-        self.rb_mem2 = tk.Radiobutton(self.leftFrame, text='200', variable=self.var_mem, value=200, bg='white')
+        self.rb_mem1 = ctk.CTkRadioButton(self.leftFrame, text='2000', variable=self.var_mem, value=2000)
+        self.rb_mem2 = ctk.CTkRadioButton(self.leftFrame, text='200', variable=self.var_mem, value=200)
         
-        self.label_lyr1 = tk.Label(self.leftFrame, text='layer 1 units : ')
+        self.label_lyr1 = ctk.CTkLabel(self.leftFrame, text='layer 1 units : ')
         self.var_lyr1 = tk.IntVar(value=64)
-        self.rb_lyr11 = tk.Radiobutton(self.leftFrame, text='64', variable=self.var_lyr1, value=64, bg='white')
-        self.rb_lyr12 = tk.Radiobutton(self.leftFrame, text='32', variable=self.var_lyr1, value=32, bg='white')
-        self.rb_lyr13 = tk.Radiobutton(self.leftFrame, text='16', variable=self.var_lyr1, value=16, bg='white')
+        self.rb_lyr11 = ctk.CTkRadioButton(self.leftFrame, text='64', variable=self.var_lyr1, value=64)
+        self.rb_lyr12 = ctk.CTkRadioButton(self.leftFrame, text='32', variable=self.var_lyr1, value=32)
+        self.rb_lyr13 = ctk.CTkRadioButton(self.leftFrame, text='16', variable=self.var_lyr1, value=16)
         
-        self.label_lyr2 = tk.Label(self.leftFrame, text='layer 2 units : ')
+        self.label_lyr2 = ctk.CTkLabel(self.leftFrame, text='layer 2 units : ')
         self.var_lyr2 = tk.IntVar(value=32)
-        self.rb_lyr21 = tk.Radiobutton(self.leftFrame, text='64', variable=self.var_lyr2, value=64, bg='white')
-        self.rb_lyr22 = tk.Radiobutton(self.leftFrame, text='32', variable=self.var_lyr2, value=32, bg='white')
-        self.rb_lyr23 = tk.Radiobutton(self.leftFrame, text='16', variable=self.var_lyr2, value=16, bg='white')
+        self.rb_lyr21 = ctk.CTkRadioButton(self.leftFrame, text='64', variable=self.var_lyr2, value=64)
+        self.rb_lyr22 = ctk.CTkRadioButton(self.leftFrame, text='32', variable=self.var_lyr2, value=32)
+        self.rb_lyr23 = ctk.CTkRadioButton(self.leftFrame, text='16', variable=self.var_lyr2, value=16)
         
-        self.label_lyr3 = tk.Label(self.leftFrame, text='layer 3 units : ')
+        self.label_lyr3 = ctk.CTkLabel(self.leftFrame, text='layer 3 units : ')
         self.var_lyr3 = tk.IntVar(value=16)
-        self.rb_lyr31 = tk.Radiobutton(self.leftFrame, text='64', variable=self.var_lyr3, value=64, bg='white')
-        self.rb_lyr32 = tk.Radiobutton(self.leftFrame, text='32', variable=self.var_lyr3, value=32, bg='white')
-        self.rb_lyr33 = tk.Radiobutton(self.leftFrame, text='16', variable=self.var_lyr3, value=16, bg='white')
+        self.rb_lyr31 = ctk.CTkRadioButton(self.leftFrame, text='64', variable=self.var_lyr3, value=64)
+        self.rb_lyr32 = ctk.CTkRadioButton(self.leftFrame, text='32', variable=self.var_lyr3, value=32)
+        self.rb_lyr33 = ctk.CTkRadioButton(self.leftFrame, text='16', variable=self.var_lyr3, value=16)
         
-        self.but_train = tk.Button(self.leftFrame, text='Start Training', command=self.train_network)
-        self.but_reset = tk.Button(self.leftFrame, text='Reset to Default', command=self.reset)
+        self.but_train = ctk.CTkButton(self.leftFrame, text='Start Training', command=self.train_network)
+        self.but_reset = ctk.CTkButton(self.leftFrame, text='Reset to Default', command=self.reset)
         
-        self.label_nn = tk.Label(self.midFrame, text='Deep Q Network Structure')
-        self.canvas_nn = tk.Canvas(self.midFrame, width=341, height=526, bg='white')
-        
-        self.label_plot = tk.Label(self.rightFrame1, text='Reward over episodes')
+        self.label_nn = ctk.CTkLabel(self.midFrame, text='Deep Q Network Structure')
+        self.canvas_nn = ctk.CTkCanvas(self.midFrame, width=341, height=526)
+    
+        self.label_plot = ctk.CTkLabel(self.rightFrame1, text='Reward over episodes')
         self.canvas_plot = FigureCanvasTkAgg(self.fig, self.rightFrame1)
         self.toolbar = NavigationToolbar2Tk(self.canvas_plot, self.rightFrame1)
         
-        self.label_txt = tk.Label(self.rightFrame2, text='Training Verbose')
-        self.txtbox = tk.Text(self.rightFrame2, bg='white')
+        self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Training Verbose')
+        self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
         
     def setup_layout(self):
         self.leftFrame.grid(row=0, column=0, padx=10, pady=5)
@@ -168,12 +168,11 @@ class display:
         self.canvas_plot.get_tk_widget().delete("all")
         self.txtbox.delete("1.0", "end")
     
-    def animate(self,i): #rewards, ax):
+    def animate(self,i):
         self.ax.clear()
         self.ax.plot(self.rewards)
         plt.pause(1)
-        #self.canvas_plot.draw()
-        #plt.pause(50)
+
     
     def train_network(self):
         self.but_reset['state'] = tk.DISABLED
@@ -195,7 +194,7 @@ class display:
         ani = animation.FuncAnimation(self.fig, self.animate, interval=1000, repeat=False)
         self.canvas_plot.draw()
         run = 0
-        while run < 100:
+        while run < 5:
             run += 1
             state = env.reset()
             state = np.reshape(state[0], [1, observation_space])
@@ -222,8 +221,9 @@ class display:
         self.but_reset['state'] = tk.NORMAL
         self.but_train['state'] = tk.NORMAL
         
-        
-root = tk.Tk()
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")    
+root = ctk.CTk()
 plt.style.use('ggplot')
 fig = Figure(figsize=(4.5,3),dpi=100)    
 view = display(root, fig)
