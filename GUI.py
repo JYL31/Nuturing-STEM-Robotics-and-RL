@@ -5,12 +5,12 @@ Created on Thu Dec 22 11:53:18 2022
 @author: Jiayuan Liu
 """
 
+import gym
 import tkinter as tk
 import customtkinter as ctk
-import gym
 import numpy as np
+from statistics import mean
 from Agent import DQN_Agent
-from matplotlib.figure import Figure
 from matplotlib import animation
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -83,7 +83,10 @@ class display:
         self.rb_lyr33 = ctk.CTkRadioButton(self.leftFrame, text='16', variable=self.var_lyr3, value=16)
         
         self.but_train = ctk.CTkButton(self.leftFrame, text='Start Training', command=self.train_network)
+        self.but_test = ctk.CTkButton(self.leftFrame, text='Start Testing', command=self.test_network)
         self.but_reset = ctk.CTkButton(self.leftFrame, text='Reset to Default', command=self.reset)
+        self.but_save = ctk.CTkButton(self.leftFrame, text='Save Network Model', command=self.save)
+        self.but_load = ctk.CTkButton(self.leftFrame, text='Load Network Model', command=self.load)
         
         self.label_nn = ctk.CTkLabel(self.midFrame, text='Deep Q Network Structure')
         self.canvas_nn = ctk.CTkCanvas(self.midFrame, width=341, height=526)
@@ -140,7 +143,10 @@ class display:
         self.rb_lyr33.grid(row=7, column=3, padx=5, pady=5)
         
         self.but_train.grid(row=8, column=1, padx=5, pady=5)
-        self.but_reset.grid(row=9, column=1, padx=5, pady=5)
+        self.but_test.grid(row=9, column=1, padx=5, pady=5)
+        self.but_reset.grid(row=10, column=1, padx=5, pady=5)
+        self.but_save.grid(row=11, column=1, padx=5, pady=5)
+        self.but_load.grid(row=12, column=1, padx=5, pady=5)
         
         self.label_nn.grid(row=0, column=0, padx=5, pady=5)
         self.canvas_nn.grid(row=1, column=0, padx=5, pady=5)
@@ -154,6 +160,40 @@ class display:
         
         self.label_txt.pack(side='top')
         self.txtbox.pack(side='bottom')
+    
+    def save(self):
+        self.agent.save()
+            
+    def load(self):
+        self.agent = DQN_Agent(load=True)
+        self.image = tk.PhotoImage(file = 'model_plot.png')
+        self.canvas_nn.create_image(172, 265, image=self.image)
+        self.canvas_nn.update()
+        
+        self.but_train['state'] = tk.DISABLED
+        self.rb_exr1['state'] = tk.DISABLED
+        self.rb_exr2['state'] = tk.DISABLED
+        self.rb_exr3['state'] = tk.DISABLED
+        self.rb_exd1['state'] = tk.DISABLED
+        self.rb_exd2['state'] = tk.DISABLED
+        self.rb_exd3['state'] = tk.DISABLED
+        self.rb_lr1['state'] = tk.DISABLED
+        self.rb_lr2['state'] = tk.DISABLED
+        self.rb_lr3['state'] = tk.DISABLED
+        self.rb_df1['state'] = tk.DISABLED
+        self.rb_df2['state'] = tk.DISABLED
+        self.rb_df3['state'] = tk.DISABLED
+        self.rb_mem1['state'] = tk.DISABLED
+        self.rb_mem2['state'] = tk.DISABLED
+        self.rb_lyr11['state'] = tk.DISABLED
+        self.rb_lyr12['state'] = tk.DISABLED
+        self.rb_lyr13['state'] = tk.DISABLED
+        self.rb_lyr21['state'] = tk.DISABLED
+        self.rb_lyr22['state'] = tk.DISABLED
+        self.rb_lyr23['state'] = tk.DISABLED
+        self.rb_lyr31['state'] = tk.DISABLED
+        self.rb_lyr32['state'] = tk.DISABLED
+        self.rb_lyr33['state'] = tk.DISABLED
         
     def reset(self):
         self.var_exr.set(value=1)
@@ -177,10 +217,13 @@ class display:
     def train_network(self):
         self.but_reset['state'] = tk.DISABLED
         self.but_train['state'] = tk.DISABLED
+        self.but_save['state'] = tk.DISABLED
+        self.but_load['state'] = tk.DISABLED
+        self.but_test['state'] = tk.DISABLED
         
         self.rewards = []
         self.ax = self.fig.add_subplot(111)
-        env = gym.make('CartPole-v0', render_mode='human')
+        env = gym.make('CartPole-v0')#, render_mode='human')
         observation_space = env.observation_space.shape[0]
         action_space = env.action_space.n
         self.layer_units = [self.var_lyr1.get(), self.var_lyr2.get(), self.var_lyr3.get()]
@@ -194,16 +237,16 @@ class display:
         ani = animation.FuncAnimation(self.fig, self.animate, interval=1000, repeat=False)
         self.canvas_plot.draw()
         run = 0
-        while run < 5:
+        done = False
+        while run < 100 and done == False:
             run += 1
             state = env.reset()
-            state = np.reshape(state[0], [1, observation_space])
+            state = np.reshape(state, [1, observation_space])
             step = 0
             while True:
-                env.render()  
-                step += 1
+                #env.render()  
                 action = self.agent.policy(state)
-                state_next, reward, terminal, info, [] = env.step(action)
+                state_next, reward, terminal, info = env.step(action)
                 reward = reward if not terminal else -reward
                 state_next = np.reshape(state_next, [1, observation_space])
                 self.agent.remember(state, action, reward, state_next, terminal)
@@ -214,22 +257,52 @@ class display:
                     self.txtbox.insert(tk.END, verbose)
                     self.txtbox.update()
                     self.rewards.append(step)
+                    if run >= 5 and mean(self.rewards[-4:]) >= 195:
+                        self.agent.save('DQN_model')
+                        done = True
+                        print("Training Completed!")
                     break
+                step += 1
                 self.agent.experience_replay()
         env.close()
         ani._stop()
         self.but_reset['state'] = tk.NORMAL
         self.but_train['state'] = tk.NORMAL
-        
-ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("blue")    
-root = ctk.CTk()
-plt.style.use('ggplot')
-fig = Figure(figsize=(4.5,3),dpi=100)    
-view = display(root, fig)
-view.setup()
+        self.but_save['state'] = tk.NORMAL
+        self.but_load['state'] = tk.NORMAL
 
-root.mainloop()
+    def test_network(self):
+        self.but_reset['state'] = tk.DISABLED
+        self.but_train['state'] = tk.DISABLED
+        self.but_save['state'] = tk.DISABLED
+        self.but_load['state'] = tk.DISABLED
+        self.but_test['state'] = tk.DISABLED
+        
+        model = self.agent.get_model()
+        env = gym.make('CartPole-v0')#, render_mode='human')
+        observation_space = env.observation_space.shape[0]
+        for episodes in 5:
+            state = env.reset()
+            state = np.reshape(state, [1, observation_space])
+            done = False
+            step = 0
+            while not done:
+                #env.render()
+                action = np.argmax(model.predict(state))
+                next_state, reward, done, _ = env.step(action)
+                state = np.reshape(next_state, [1, observation_space])
+                if done:
+                    print("Episode: {}, Reward: {} \n".format(episodes, step))
+                    break
+                step += 1
+        
+        env.close()
+        self.but_reset['state'] = tk.NORMAL
+        self.but_train['state'] = tk.NORMAL
+        self.but_save['state'] = tk.NORMAL
+        self.but_load['state'] = tk.NORMAL
+        self.but_test['state'] = tk.NORMAL
+        
 
 
 

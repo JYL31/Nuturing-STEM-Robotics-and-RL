@@ -9,6 +9,7 @@ import numpy as np
 import random
 from collections import deque
 from keras.models import Sequential
+from keras.models import load_model
 from keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
@@ -18,8 +19,11 @@ import os
 # Reference: https://github.com/gsurma/cartpole/blob/master/cartpole.py
 class DQN_Agent:
 
-    def __init__(self, observation_space, action_space, exploration_rate = 1, exploration_decay = 0.999, 
-                 learning_rate = 0.001, discount_factor = 0.95, memory_size = 2000, batch_size = 64, layer_units = [64, 32, 16]):
+    def __init__(self, observation_space = 1, action_space = 1, exploration_rate = 1, 
+                 exploration_decay = 0.999, learning_rate = 0.001, 
+                 discount_factor = 0.95, memory_size = 2000, 
+                 batch_size = 64, layer_units = [64, 32, 16],
+                 load = False):
 
         self.action_space = action_space
         self.observation_space = observation_space
@@ -33,14 +37,17 @@ class DQN_Agent:
         
         self.RAM = deque(maxlen=int(memory_size))
         self.ROM = deque(maxlen=int(memory_size*0.1))
-
+        
+        if load == True:
+            self.model = load_model('DQN_model')
+        else:
         # Deep Q learning network, input size is number of observation, output size is number of actions
-        self.model = Sequential()
-        self.model.add(Dense(self.layer_units[0], input_shape=(self.observation_space,), activation="relu", kernel_initializer='he_uniform'))
-        self.model.add(Dense(self.layer_units[1], activation="relu", kernel_initializer='he_uniform'))
-        self.model.add(Dense(self.layer_units[2], activation="relu", kernel_initializer='he_uniform'))
-        self.model.add(Dense(self.action_space, activation="linear", kernel_initializer='he_uniform'))
-        self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate))
+            self.model = Sequential()
+            self.model.add(Dense(self.layer_units[0], input_shape=(self.observation_space,), activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.layer_units[1], activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.layer_units[2], activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.action_space, activation="linear", kernel_initializer='he_uniform'))
+            self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate))
         
         exists = os.path.exists('model_plot.png')
         if exists:
@@ -102,3 +109,9 @@ class DQN_Agent:
         
         self.exploration_rate *= self.exploration_decay
         self.exploration_rate = max(0.01, self.exploration_rate)
+    
+    def save(self):
+        self.model.save('DQN_model')
+
+    def get_model(self):
+        return self.model
