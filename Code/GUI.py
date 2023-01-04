@@ -98,6 +98,18 @@ class display:
         self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Training Verbose')
         self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
         
+        self.radiobuttons = [self.rb_exr1, self.rb_exr2, self.rb_exr3,
+                             self.rb_exd1, self.rb_exd2, self.rb_exd3, 
+                             self.rb_lr1, self.rb_lr2, self.rb_lr3, 
+                             self.rb_df1, self.rb_df2, self.rb_df3, 
+                             self.rb_mem1, self.rb_mem2, self.rb_lyr11, 
+                             self.rb_lyr12, self.rb_lyr13, self.rb_lyr21,
+                             self.rb_lyr22, self.rb_lyr23, self.rb_lyr31, 
+                             self.rb_lyr32, self.rb_lyr33]
+        
+        self.buttons = [self.but_train, self.but_test, self.but_reset,
+                        self.but_save, self.but_load]
+        
     def setup_layout(self):
         self.leftFrame.grid(row=0, column=0, padx=10, pady=5)
         self.midFrame.grid(row=0, column=1, padx=10, pady=5)
@@ -170,31 +182,10 @@ class display:
         self.canvas_nn.create_image(172, 265, image=self.image)
         self.canvas_nn.update()
         
-        self.but_train['state'] = tk.DISABLED
-        self.rb_exr1['state'] = tk.DISABLED
-        self.rb_exr2['state'] = tk.DISABLED
-        self.rb_exr3['state'] = tk.DISABLED
-        self.rb_exd1['state'] = tk.DISABLED
-        self.rb_exd2['state'] = tk.DISABLED
-        self.rb_exd3['state'] = tk.DISABLED
-        self.rb_lr1['state'] = tk.DISABLED
-        self.rb_lr2['state'] = tk.DISABLED
-        self.rb_lr3['state'] = tk.DISABLED
-        self.rb_df1['state'] = tk.DISABLED
-        self.rb_df2['state'] = tk.DISABLED
-        self.rb_df3['state'] = tk.DISABLED
-        self.rb_mem1['state'] = tk.DISABLED
-        self.rb_mem2['state'] = tk.DISABLED
-        self.rb_lyr11['state'] = tk.DISABLED
-        self.rb_lyr12['state'] = tk.DISABLED
-        self.rb_lyr13['state'] = tk.DISABLED
-        self.rb_lyr21['state'] = tk.DISABLED
-        self.rb_lyr22['state'] = tk.DISABLED
-        self.rb_lyr23['state'] = tk.DISABLED
-        self.rb_lyr31['state'] = tk.DISABLED
-        self.rb_lyr32['state'] = tk.DISABLED
-        self.rb_lyr33['state'] = tk.DISABLED
-        
+        self.but_train.configure(state="disabled")
+        for i in self.radiobuttons:
+            i.configure(state="disabled")
+
     def reset(self):
         self.var_exr.set(value=1)
         self.var_exd.set(value=0.999)
@@ -207,6 +198,14 @@ class display:
         self.canvas_nn.delete("all")
         self.canvas_plot.get_tk_widget().delete("all")
         self.txtbox.delete("1.0", "end")
+        
+        for i in self.buttons:
+            i.configure(state="normal")
+        for i in self.radiobuttons:
+            i.configure(state="normal")
+        
+        if isinstance(self.agent, DQN_Agent):
+            del self.agent
     
     def animate(self,i):
         self.ax.clear()
@@ -215,15 +214,14 @@ class display:
 
     
     def train_network(self):
-        self.but_reset['state'] = tk.DISABLED
-        self.but_train['state'] = tk.DISABLED
-        self.but_save['state'] = tk.DISABLED
-        self.but_load['state'] = tk.DISABLED
-        self.but_test['state'] = tk.DISABLED
+        for i in self.buttons:
+            i.configure(state="disabled")
+        for i in self.radiobuttons:
+            i.configure(state="disabled")    
         
         self.rewards = []
         self.ax = self.fig.add_subplot(111)
-        env = gym.make('CartPole-v0')#, render_mode='human')
+        env = gym.make('CartPole-v0') #, render_mode='human')
         observation_space = env.observation_space.shape[0]
         action_space = env.action_space.n
         self.layer_units = [self.var_lyr1.get(), self.var_lyr2.get(), self.var_lyr3.get()]
@@ -231,6 +229,7 @@ class display:
                                exploration_decay=self.var_exd.get(), learning_rate=self.var_lr.get(), 
                                discount_factor=self.var_df.get(), memory_size=self.var_mem.get(), 
                                layer_units=self.layer_units)
+        print(isinstance(self.agent, DQN_Agent))
         self.image = tk.PhotoImage(file = 'model_plot.png')
         self.canvas_nn.create_image(172, 265, image=self.image)
         self.canvas_nn.update()
@@ -238,7 +237,7 @@ class display:
         self.canvas_plot.draw()
         run = 0
         done = False
-        while run < 100 and done == False:
+        while run < 5 and done == False:
             run += 1
             state = env.reset()
             state = np.reshape(state, [1, observation_space])
@@ -266,17 +265,16 @@ class display:
                 self.agent.experience_replay()
         env.close()
         ani._stop()
-        self.but_reset['state'] = tk.NORMAL
-        self.but_train['state'] = tk.NORMAL
-        self.but_save['state'] = tk.NORMAL
-        self.but_load['state'] = tk.NORMAL
+        for i in self.buttons:
+            i.configure(state="normal")
+        for i in self.radiobuttons:
+            i.configure(state="normal") 
 
     def test_network(self):
-        self.but_reset['state'] = tk.DISABLED
-        self.but_train['state'] = tk.DISABLED
-        self.but_save['state'] = tk.DISABLED
-        self.but_load['state'] = tk.DISABLED
-        self.but_test['state'] = tk.DISABLED
+        for i in self.buttons:
+            i.configure(state="disabled")
+        for i in self.radiobuttons:
+            i.configure(state="disabled") 
         
         model = self.agent.get_model()
         env = gym.make('CartPole-v0')#, render_mode='human')
@@ -297,11 +295,10 @@ class display:
                 step += 1
         
         env.close()
-        self.but_reset['state'] = tk.NORMAL
-        self.but_train['state'] = tk.NORMAL
-        self.but_save['state'] = tk.NORMAL
-        self.but_load['state'] = tk.NORMAL
-        self.but_test['state'] = tk.NORMAL
+        for i in self.buttons:
+            i.configure(state="normal")
+        for i in self.radiobuttons:
+            i.configure(state="normal") 
         
 
 

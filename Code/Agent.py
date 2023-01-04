@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Dec 22 11:14:39 2022
-
 @author: Jiayuan Liu
+
+Title: Cartpole_DQN source code
+Author: pythonlessons
+Date: 2020
+Availability: https://github.com/pythonlessons/Reinforcement_Learning/blob/master/01_CartPole-reinforcement-learning/Cartpole_DQN.py
+
 """
 
 import numpy as np
@@ -16,7 +21,6 @@ import tensorflow as tf
 import os
 
 
-# Reference: https://github.com/gsurma/cartpole/blob/master/cartpole.py
 class DQN_Agent:
 
     def __init__(self, observation_space = 1, action_space = 1, exploration_rate = 1, 
@@ -80,9 +84,6 @@ class DQN_Agent:
         next_state = np.zeros((self.batch_size, self.observation_space))
         action, reward, done = [], [], []
 
-        # do this before prediction
-        # for speedup, this could be done on the tensor level
-        # but easier to understand using a loop
         for i in range(self.batch_size):
             state[i] = batch[i][0]
             action.append(batch[i][1])
