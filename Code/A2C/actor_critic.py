@@ -32,6 +32,7 @@ class GenericNetwork(nn.Module):
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.fc3_dims)
         self.fc4 = nn.Linear(self.fc3_dims, self.n_actions)
+        
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu') # to use GPU/CPU
         self.to(self.device)
@@ -101,7 +102,13 @@ def train():
             action = np.array(agent.choose_action(state)).reshape((1,))
             state_next, reward, terminal, info = env.step(action)
             #agent.learn(state, reward, state_next, terminal)
-            reward = reward if not terminal else -reward
+            #reward = reward if not terminal else -reward
+            dif = -100*(abs(state_next[2]) - abs(state[2]))
+            if dif > 0:
+                reward = 10*dif
+            else:
+                reward = dif
+            #print(reward)
             agent.learn(state, reward, state_next, terminal)
             state = state_next
             if terminal:

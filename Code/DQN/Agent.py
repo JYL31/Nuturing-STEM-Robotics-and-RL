@@ -25,7 +25,7 @@ class DQN_Agent:
 
     def __init__(self, observation_space = 1, action_space = 1, exploration_rate = 1, 
                  exploration_decay = 0.999, learning_rate = 0.001, 
-                 discount_factor = 0.95, memory_size = 2000, 
+                 discount_factor = 0.95, memory_size = 2000, memory_type = 1, 
                  batch_size = 64, layer_units = [64, 32, 16],
                  load = False):
 
@@ -36,11 +36,16 @@ class DQN_Agent:
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.memory_size = memory_size
+        self.memory_type = memory_type
         self.batch_size = batch_size
         self.layer_units = layer_units
         
-        self.RAM = deque(maxlen=int(memory_size))
-        self.ROM = deque(maxlen=int(memory_size*0.1))
+        if self.memory_type == 1:
+            self.RAM = deque(maxlen=int(memory_size))
+            self.ROM = deque(maxlen=int(memory_size*0.1))
+        else:
+            self.RAM = deque(maxlen=int(memory_size))
+            self.ROM = deque(maxlen=0)
         
         if load == True:
             self.model = load_model('DQN_model')
@@ -61,7 +66,7 @@ class DQN_Agent:
     # memory of the agent
     def remember(self, state, action, reward, next_state, done):
         self.RAM.append((state, action, reward, next_state, done))
-        if len(self.ROM) != self.memory_size*0.1:
+        if len(self.ROM) != self.memory_size*0.1 and self.memory_type != 0:
           self.ROM.append((state, action, reward, next_state, done))
 
     # how agent decides to take an action:
