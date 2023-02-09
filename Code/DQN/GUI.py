@@ -7,10 +7,12 @@ Created on Thu Dec 22 11:53:18 2022
 
 import gym
 import os
+import pygame
 import tkinter as tk
 import customtkinter as ctk
 import numpy as np
 from statistics import mean
+from util_play import play
 from Agent import DQN_Agent
 from Log import csv_log
 from Log_Veiwer import log_viewer
@@ -56,6 +58,7 @@ class display:
         self.but_save = ctk.CTkButton(self.leftFrame, text='Save Network Model', command=self.save)
         self.but_load = ctk.CTkButton(self.leftFrame, text='Load Network Model', command=self.load)
         self.but_log = ctk.CTkButton(self.leftFrame, text='Log', command=self.open_csv)
+        self.but_play = ctk.CTkButton(self.leftFrame, text='Play', command=self.manual_play)
         
         self.label_nn = ctk.CTkLabel(self.midFrame, text='Deep Q Network Structure')
         self.canvas_nn = ctk.CTkCanvas(self.midFrame, width=341, height=526)
@@ -64,13 +67,14 @@ class display:
         self.canvas_plot = FigureCanvasTkAgg(self.fig, self.rightFrame1)
         self.toolbar = NavigationToolbar2Tk(self.canvas_plot, self.rightFrame1)
         
-        self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Training Verbose')
+        self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Verbose')
         self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
         
         self.radiobuttons = [self.rb_exr1, self.rb_exr2, self.rb_lr1, self.rb_lr2]
         
         self.buttons = [self.but_train, self.but_test, self.but_reset,
-                        self.but_save, self.but_load, self.but_log]
+                        self.but_save, self.but_load, self.but_log,
+                        self.but_play]
         
     def setup_layout(self):
         self.leftFrame.grid(row=0, column=0, padx=10, pady=5)
@@ -93,6 +97,7 @@ class display:
         self.but_save.grid(row=6, column=1, padx=5, pady=5)
         self.but_load.grid(row=7, column=1, padx=5, pady=5)
         self.but_log.grid(row=8, column=1, padx=5, pady=5)
+        self.but_play.grid(row=9, column=1, padx=5, pady=5)
         
         self.label_nn.grid(row=0, column=0, padx=5, pady=5)
         self.canvas_nn.grid(row=1, column=0, padx=5, pady=5)
@@ -144,6 +149,7 @@ class display:
 
     
     def train_network(self):
+        
         for i in self.buttons:
             i.configure(state="disabled")
         for i in self.radiobuttons:
@@ -154,14 +160,16 @@ class display:
         
         self.rewards = []
         self.ax = self.fig.add_subplot(111)
-        #env = gym.make('CartPole-v0', render_mode='human')
         
         cwd = os.getcwd()
         path = os.path.join(cwd,'Videos')
         if os.path.exists(path) == False:
             os.mkdir(path)
             
-        env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), video_folder=path, episode_trigger = lambda x: x % 10 == 0)
+        env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
+                                       video_folder=path, episode_trigger = lambda x: x % 2 == 0,
+                                       name_prefix='train')
+        env.seed(5)
         observation_space = env.observation_space.shape[0]
         action_space = env.action_space.n
         self.agent = DQN_Agent(observation_space, action_space, exploration_rate=self.var_exr.get(), 
@@ -184,13 +192,14 @@ class display:
                 env.render()  
                 action = self.agent.policy(state)
                 state_next, reward, terminal, info = env.step(action)
-                reward = reward if not terminal else -reward
+                #reward = reward if not terminal else -reward
+                reward = -100*(abs(state_next[2]) - abs(state[0][2]))
                 state_next = np.reshape(state_next, [1, observation_space])
                 self.agent.remember(state, action, reward, state_next, terminal)
                 state = state_next
                 step += 1
                 if terminal:
-                    verbose = "Episodes: " + str(run) + ", Exploration: " + str(self.agent.exploration_rate) + ", Reward: " + str(step) + '\n'
+                    verbose = "Episodes: " + str(run) + ", Exploration: " + str(self.agent.exploration_rate) + ", Score: " + str(step) + '\n'
                     print(verbose)
                     self.txtbox.insert(tk.END, verbose)
                     self.txtbox.update()
@@ -220,8 +229,21 @@ class display:
         
         log = csv_log(file_type='test')
         
+        cwd = os.getcwd()
+        path = os.path.join(cwd,'Videos')
+        if os.path.exists(path) == False:
+            os.mkdir(path)
+        
+        self.agent = DQN_Agent(load=True)
         model = self.agent.get_model()
-        env = gym.make('CartPole-v0', render_mode='human')
+        
+        self.image = tk.PhotoImage(file = 'model_plot.png')
+        self.canvas_nn.create_image(172, 265, image=self.image)
+        self.canvas_nn.update()
+        
+        env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
+                                       video_folder=path, episode_trigger = lambda x: True,
+                                       name_prefix='test')
         observation_space = env.observation_space.shape[0]
         for episodes in range(1,6):
             state = env.reset()
@@ -230,15 +252,17 @@ class display:
             step = 0
             while not done:
                 env.render()
-                action = np.argmax(model.predict(state))
+                action = np.argmax(model.predict(state, verbose=0))
                 next_state, reward, done, _ = env.step(action)
                 state = np.reshape(next_state, [1, observation_space])
-                if done:
-                    print("Episode: {}, Reward: {} \n".format(episodes, step))
-                    break
                 step += 1
+                if done:
+                    verbose = "Episodes: " + str(episodes) + ", Score: " + str(step) + '\n'
+                    print(verbose)
+                    self.txtbox.insert(tk.END, verbose)
+                    self.txtbox.update()
+                    break
                 log.write(episodes, state, action, reward, step)
-        
         env.close()
         log.close()
         for i in self.buttons:
@@ -248,7 +272,32 @@ class display:
         self.rb_mem.configure(state="normal")
         
     def open_csv(self):
-        new_window = log_viewer(self.container)
+        
+        def destroy():
+            self.table_window.destroy()
+        
+        self.table_window = ctk.CTkToplevel(self.container)
+        self.table_window.protocol("WM_DELETE_WINDOW", destroy)
+        self.table_window.geometry("800x650")
+        self.table_window.pack_propagate(False)
+        self.table_window.resizable(0, 0)
+        self.table_GUI = log_viewer(self.table_window)
+        
+    def manual_play(self):
+        for i in self.buttons:
+            i.configure(state="disabled")
+        for i in self.radiobuttons:
+            i.configure(state="disabled")
+        self.rb_mem.configure(state="disabled")
+        
+        mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
+        play(gym.make("CartPole-v0"), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
+        
+        for i in self.buttons:
+            i.configure(state = "normal")
+        for i in self.radiobuttons:
+            i.configure(state = "normal") 
+        self.rb_mem.configure(state = "normal")
         
 
 
