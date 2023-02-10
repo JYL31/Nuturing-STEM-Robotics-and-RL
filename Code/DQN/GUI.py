@@ -36,8 +36,8 @@ class display:
         self.leftFrame = ctk.CTkFrame(self.container, width=100, height=780)
         self.midFrame = ctk.CTkFrame(self.container, width=300, height=780)
         self.rightFrame = ctk.CTkFrame(self.container, width=400, height=800)
-        self.rightFrame1 = ctk.CTkFrame(self.rightFrame, width=400, height=390)
-        self.rightFrame2 = ctk.CTkFrame(self.rightFrame, width=400, height=390)
+        self.rightFrame1 = ctk.CTkFrame(self.rightFrame, width=400, height=380)
+        self.rightFrame2 = ctk.CTkFrame(self.rightFrame, width=400, height=380)
         
         self.label_exr = ctk.CTkLabel(self.leftFrame, text='exploration rate : ')
         self.var_exr = tk.DoubleVar(value=1)
@@ -61,7 +61,7 @@ class display:
         self.but_play = ctk.CTkButton(self.leftFrame, text='Play', command=self.manual_play)
         
         self.label_nn = ctk.CTkLabel(self.midFrame, text='Deep Q Network Structure')
-        self.canvas_nn = ctk.CTkCanvas(self.midFrame, width=341, height=526)
+        self.canvas_nn = ctk.CTkCanvas(self.midFrame, width=340, height=700)
     
         self.label_plot = ctk.CTkLabel(self.rightFrame1, text='Reward over episodes')
         self.canvas_plot = FigureCanvasTkAgg(self.fig, self.rightFrame1)
@@ -80,6 +80,7 @@ class display:
         self.leftFrame.grid(row=0, column=0, padx=10, pady=5)
         self.midFrame.grid(row=0, column=1, padx=10, pady=5)
         self.rightFrame.grid(row=0, column=2, padx=10, pady=5)
+        self.rightFrame.grid_propagate(False)
         
         self.label_exr.grid(row=0, column=0, padx=5, pady=5)
         self.rb_exr1.grid(row=0, column=1, padx=5, pady=5)
@@ -103,11 +104,14 @@ class display:
         self.canvas_nn.grid(row=1, column=0, padx=5, pady=5)
         
         self.rightFrame1.pack(side='top')
+        self.rightFrame1.pack_propagate(False)
         self.rightFrame2.pack(side='bottom')
+        self.rightFrame2.pack_propagate(False)
         
         self.label_plot.pack(side='top')
         self.canvas_plot.get_tk_widget().pack(side='bottom')
         self.toolbar.pack(side='bottom')
+        self.canvas_plot.draw()
         
         self.label_txt.pack(side='top')
         self.txtbox.pack(side='bottom')
@@ -142,7 +146,7 @@ class display:
         if isinstance(self.agent, DQN_Agent):
             del self.agent
     
-    def animate(self,i):
+    def animate(self):
         self.ax.clear()
         self.ax.plot(self.rewards)
         plt.pause(1)
@@ -178,8 +182,6 @@ class display:
         self.image = tk.PhotoImage(file = 'model_plot.png')
         self.canvas_nn.create_image(172, 265, image=self.image)
         self.canvas_nn.update()
-        ani = animation.FuncAnimation(self.fig, self.animate, interval=1000, repeat=False)
-        self.canvas_plot.draw()
         
         run = 0
         done = False
@@ -204,6 +206,8 @@ class display:
                     self.txtbox.insert(tk.END, verbose)
                     self.txtbox.update()
                     self.rewards.append(step)
+                    self.animate()
+                    self.canvas_plot.draw()
                     if run >= 5 and mean(self.rewards[-4:]) >= 195:
                         self.agent.save()
                         done = True
@@ -213,7 +217,7 @@ class display:
                 self.agent.experience_replay()
         env.close()
         log.close()
-        ani._stop()
+        #ani._stop()
         for i in self.buttons:
             i.configure(state="normal")
         for i in self.radiobuttons:
