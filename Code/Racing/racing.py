@@ -8,18 +8,20 @@ Created on Wed Jan 18 14:08:32 2023
 import numpy as np
 import random
 import gym
+import cv2
+import csv
 from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
 from tensorflow.keras.optimizers import Adam
-
+from custom_racing import CarRacing
 
 class DQN_Agent:
 
     def __init__(self, observation_space = 1, action_space = 1, exploration_rate = 1, 
-                 exploration_decay = 0.9999, learning_rate = 0.001, 
-                 discount_factor = 0.95, memory_size = 10000, 
-                 batch_size = 128):
+                 exploration_decay = 0.9995, learning_rate = 0.001, 
+                 discount_factor = 0.95, memory_size = 5000, 
+                 batch_size = 64):
 
         self.action_space = action_space
         self.observation_space = observation_space
@@ -30,25 +32,22 @@ class DQN_Agent:
         self.memory_size = memory_size
         self.batch_size = batch_size
         
-        self.RAM = deque(maxlen=int(memory_size))
-        self.ROM = deque(maxlen=int(memory_size*0.1))
+        self.memory = deque(maxlen=int(memory_size))
         
         # Deep Q learning network, input size is number of observation, output size is number of actions
         self.model = Sequential()
-        self.model.add(Conv2D(filters=6, kernel_size=(7, 7), strides=3, activation='relu', input_shape=(96,96,3)))
+        self.model.add(Conv2D(filters=6, kernel_size=(7, 7), strides=3, activation='relu', input_shape=(96,96,5)))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
         self.model.add(Conv2D(filters=12, kernel_size=(4, 4), activation='relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
         self.model.add(Flatten())
         self.model.add(Dense(216, activation='relu'))
-        self.model.add(Dense(len(action_space), activation='linear'))
+        self.model.add(Dense(len(action_space), activation=None))
         self.model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
 
     # memory of the agent
     def remember(self, state, action, reward, next_state, done):
-        self.RAM.append((state, action, reward, next_state, done))
-        if len(self.ROM) != self.memory_size*0.1:
-          self.ROM.append((state, action, reward, next_state, done))
+        self.memory.append((state, action, reward, next_state, done))
 
     # how agent decides to take an action:
     # randomly picks a number between 0 and 1, if less than exploration rate, agent chooses a random action
@@ -61,15 +60,14 @@ class DQN_Agent:
 
     # train the deep Q learning network using past memory
     def experience_replay(self):
-        memory = self.RAM + self.ROM
-        if len(memory) < self.batch_size:
+        if len(self.memory) < self.batch_size:
             return
-        batch = random.sample(memory, self.batch_size)
+        batch = random.sample(self.memory, self.batch_size)
         
-        state = np.zeros((128,96,96,3))#(self.batch_size, self.observation_space)
-        next_state = np.zeros((128,96,96,3))
+        state = np.zeros((64,96,96,5))
+        next_state = np.zeros((64,96,96,5))
         action, reward, done = [], [], []
-
+        
         for i in range(self.batch_size):
             state[i] = batch[i][0]
             action.append(batch[i][1])
@@ -98,28 +96,64 @@ class DQN_Agent:
         self.exploration_rate = max(0.01, self.exploration_rate)
     
 def train_network():
-    env = gym.make("CarRacing-v2", continuous=True)#, render_mode='human')
+    path = 'E:\Melb Uni\Capstone\Racing'
+
+    env = gym.wrappers.RecordVideo(CarRacing(continuous=True, render_mode='rgb_array'), 
+                                       video_folder=path, name_prefix='train', episode_trigger = lambda x: x % 2 == 0)
+    
     observation_space = env.observation_space.shape
-    action_space = [(-1, 1, 0), (0, 1, 0), (1, 1, 0), #           Action Space Structure
-                    (-1, 0, 0.2), (0, 0, 0.2), (1, 0, 0.2)] #        (Steering Wheel, Gas, Break)
-                    #(-1, 0, 0.2), (0, 0, 0.2), (1, 0, 0.2)] # Range        -1~1       0~1   0~1
+
+    action_space = [(0, 1, 0), (-1, 0, 0), (0, 0, 0), #           Action Space Structure
+                    (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
+                                                      # Range        -1~1       0~1   0~1
+                                                      
     agent = DQN_Agent(observation_space, action_space)
     run = 0
+    file = open('E:/Melb Uni/Capstone/Racing/results.csv', 'w', newline='')
+    writer = csv.writer(file)
+
     while run < 100:
         run += 1
-        state = env.reset()
+        state = env.reset(seed=10)
+        state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
+        state = state.astype(float)
+        state /= 255.0
+        frame_stack = deque([state]*5, maxlen=5)
         total_rewards = 0
         while True:
             #env.render()
-            action = agent.policy(state)
-            state_next, reward, terminal, info = env.step(action_space[action])
+            cur_frame_stack = np.array(frame_stack)
+            cur_frame_stack = np.transpose(cur_frame_stack, (1, 2, 0))
+            action = agent.policy(cur_frame_stack)
+            
+            reward = 0
+            for i in range(3):
+                state_next, r, terminal, info = env.step(action_space[action])
+                reward += r
+                if terminal:
+                    break
+        
+            if action_space[action][1] == 1 and reward > 0:
+                reward = 1.2*reward
             total_rewards += reward
-            agent.remember(state, action, reward, state_next, terminal)
-            state = state_next
-            if terminal:
-                verbose = "Episodes: " + str(run) + ", Exploration: " + str(agent.exploration_rate) + ", Reward: " + str(total_rewards) + '\n'
+            
+            state_next = cv2.cvtColor(state_next, cv2.COLOR_BGR2GRAY)
+            state_next = state_next.astype(float)
+            state_next /= 255.0
+            frame_stack.append(state_next)
+            next_frame_stack = np.array(frame_stack)
+            next_frame_stack = np.transpose(next_frame_stack, (1, 2, 0))
+            
+            agent.remember(cur_frame_stack, action, reward, next_frame_stack, terminal)
+            
+            if terminal or total_rewards < 0:
+                verbose = "Episodes: " + str(run) + ", Exploration: " + str(agent.exploration_rate) + ", Score: " + str(total_rewards) + '\n'
                 print(verbose)
+                writer.writerow([agent.exploration_rate, total_rewards])
+                
                 break
             agent.experience_replay()
+    file.close()
 
 train_network()
+
