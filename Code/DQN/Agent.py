@@ -15,7 +15,7 @@ import random
 from collections import deque
 from keras.models import Sequential
 from keras.models import load_model
-from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
+from keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 import os
@@ -24,69 +24,44 @@ import os
 class DQN_Agent:
 
     def __init__(self, observation_space = 1, action_space = 1, exploration_rate = 1, 
-                 learning_rate = 0.001, memory_type = 1, env = 0, load = False):
+                 exploration_decay = 0.999, learning_rate = 0.001, 
+                 discount_factor = 0.95, memory_size = 2000, memory_type = 1, 
+                 batch_size = 64, layer_units = [64, 32, 16],
+                 load = False):
 
-        self.env = env
         self.action_space = action_space
         self.observation_space = observation_space
         self.exploration_rate = exploration_rate
+        self.exploration_decay = exploration_decay
         self.learning_rate = learning_rate
-        self.discount_factor = 0.95
+        self.discount_factor = discount_factor
+        self.memory_size = memory_size
         self.memory_type = memory_type
-        self.batch_size = 64
-        
-        if self.env == 0:
-            self.exploration_decay = 0.999
-            self.memory_size = 2000
-        elif self.env == 1:
-            self.exploration_decay = 0.9995
-            self.memory_size = 5000
+        self.batch_size = batch_size
+        self.layer_units = layer_units
         
         if self.memory_type == 1:
-            self.RAM = deque(maxlen=int(self.memory_size))
-            self.ROM = deque(maxlen=int(self.memory_size*0.1))
+            self.RAM = deque(maxlen=int(memory_size))
+            self.ROM = deque(maxlen=int(memory_size*0.1))
         else:
-            self.RAM = deque(maxlen=int(self.memory_size))
+            self.RAM = deque(maxlen=int(memory_size))
             self.ROM = deque(maxlen=0)
         
-        cwd = os.getcwd()
-        if env == 0:
-            path = r'Cartpole\DQN_model'
-            path = os.path.join(cwd, path)
-            if os.path.exists(path) == False:
-                os.mkdir(path)
-            if load == True:
-                self.model = load_model(path)
-            else:
-                self.model = Sequential()
-                self.model.add(Dense(64, input_shape=(self.observation_space,), activation="relu", kernel_initializer='he_uniform'))
-                self.model.add(Dense(32, activation="relu", kernel_initializer='he_uniform'))
-                self.model.add(Dense(16, activation="relu", kernel_initializer='he_uniform'))
-                self.model.add(Dense(self.action_space, activation="linear", kernel_initializer='he_uniform'))
-                self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate))
-        elif env == 1:
-            path = r'CarRacing\DQN_model'
-            path = os.path.join(cwd, path)
-            if os.path.exists(path) == False:
-                os.mkdir(path)
-            if load == True:
-                self.model = load_model(path)
-            else:
-                self.model = Sequential()
-                self.model.add(Conv2D(filters=6, kernel_size=(7, 7), strides=3, activation='relu', input_shape=(96,96,5)))
-                self.model.add(MaxPooling2D(pool_size=(2, 2)))
-                self.model.add(Conv2D(filters=12, kernel_size=(4, 4), activation='relu'))
-                self.model.add(MaxPooling2D(pool_size=(2, 2)))
-                self.model.add(Flatten())
-                self.model.add(Dense(216, activation='relu'))
-                self.model.add(Dense(len(self.action_space), activation=None))
-                self.model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        if load == True:
+            self.model = load_model('DQN_model')
+        else:
+        # Deep Q learning network, input size is number of observation, output size is number of actions
+            self.model = Sequential()
+            self.model.add(Dense(self.layer_units[0], input_shape=(self.observation_space,), activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.layer_units[1], activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.layer_units[2], activation="relu", kernel_initializer='he_uniform'))
+            self.model.add(Dense(self.action_space, activation="linear", kernel_initializer='he_uniform'))
+            self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate))
         
-        path = os.path.join(path, 'model_plot.png')
-        exists = os.path.exists(path)
+        exists = os.path.exists('model_plot.png')
         if exists:
-            os.remove(path)
-        tf.keras.utils.plot_model(self.model, to_file=path, show_shapes=True, show_layer_names=True)
+            os.remove('model_plot.png')
+        tf.keras.utils.plot_model(self.model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
     # memory of the agent
     def remember(self, state, action, reward, next_state, done):
@@ -98,13 +73,10 @@ class DQN_Agent:
     # randomly picks a number between 0 and 1, if less than exploration rate, agent chooses a random action
     # else, agent chooses the one with the largest Q value
     def policy(self, state):
-        if np.random.rand() < self.exploration_rate:
-            if self.env == 0:
-                return random.randrange(self.action_space)
-            elif self.env == 1:
-                return random.randrange(len(self.action_space))
-        q_values = self.model.predict(state, verbose=0)
-        return np.argmax(q_values[0])
+      if np.random.rand() < self.exploration_rate:
+        return random.randrange(self.action_space)
+      q_values = self.model.predict(state, verbose=0)
+      return np.argmax(q_values[0])
 
     # train the deep Q learning network using past memory
     def experience_replay(self):
@@ -112,12 +84,9 @@ class DQN_Agent:
         if len(memory) < self.batch_size:
             return
         batch = random.sample(memory, self.batch_size)
-        if self.env == 0:
-            state = np.zeros((self.batch_size, self.observation_space))
-            next_state = np.zeros((self.batch_size, self.observation_space))
-        elif self.env == 1:
-            state = np.zeros((64,96,96,5))
-            next_state = np.zeros((64,96,96,5))
+        
+        state = np.zeros((self.batch_size, self.observation_space))
+        next_state = np.zeros((self.batch_size, self.observation_space))
         action, reward, done = [], [], []
 
         for i in range(self.batch_size):
@@ -148,13 +117,7 @@ class DQN_Agent:
         self.exploration_rate = max(0.01, self.exploration_rate)
     
     def save(self):
-        cwd = os.getcwd()
-        if self.env == 0:
-            path = os.path.join(cwd, r'Cartpole\DQN_model')
-            self.model.save(path)
-        elif self.env == 1:
-            path = os.path.join(cwd, r'CarRacing\DQN_model')
-            self.model.save(path)
+        self.model.save('DQN_model')
 
     def get_model(self):
         return self.model
