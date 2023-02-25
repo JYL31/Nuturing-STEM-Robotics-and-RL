@@ -6,19 +6,14 @@ Created on Sun Feb  5 13:51:47 2023
 """
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import customtkinter as ctk
+from tkinter import filedialog, ttk
 import pandas as pd
 import os
 
 class log_viewer:
     
-    def __init__(self, root):
-        self.container = root
-        self.window = ctk.CTkToplevel(self.container)
-        self.window.geometry("800x650")
-        self.window.pack_propagate(False)
-        self.window.resizable(0, 0)
+    def __init__(self, window):
+        self.window = window
         
         self.topframe = tk.LabelFrame(self.window, text="Log Data")
         self.topframe.place(height=500, width=800)

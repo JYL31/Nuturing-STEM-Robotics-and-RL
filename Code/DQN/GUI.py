@@ -7,16 +7,18 @@ Created on Thu Dec 22 11:53:18 2022
 
 import gym
 import os
+import cv2
 import pygame
 import tkinter as tk
 import customtkinter as ctk
 import numpy as np
+from collections import deque
+from custom_racing import CarRacing
 from statistics import mean
 from util_play import play
 from Agent import DQN_Agent
 from Log import csv_log
 from Log_Veiwer import log_viewer
-from matplotlib import animation
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
@@ -39,15 +41,20 @@ class display:
         self.rightFrame1 = ctk.CTkFrame(self.rightFrame, width=400, height=380)
         self.rightFrame2 = ctk.CTkFrame(self.rightFrame, width=400, height=380)
         
-        self.label_exr = ctk.CTkLabel(self.leftFrame, text='exploration rate : ')
+        self.label_exr = ctk.CTkLabel(self.leftFrame, text='Exploration rate : ')
         self.var_exr = tk.DoubleVar(value=1)
         self.rb_exr1 = ctk.CTkRadioButton(self.leftFrame, text='1', variable=self.var_exr, value=1)
         self.rb_exr2 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_exr, value=0.1)
         
-        self.label_lr = ctk.CTkLabel(self.leftFrame, text='learning rate : ')
+        self.label_lr = ctk.CTkLabel(self.leftFrame, text='Learning rate : ')
         self.var_lr = tk.DoubleVar(value=0.001)
         self.rb_lr1 = ctk.CTkRadioButton(self.leftFrame, text='0.001', variable=self.var_lr, value=0.001)
         self.rb_lr2 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_lr, value=0.1)
+        
+        self.label_env = ctk.CTkLabel(self.leftFrame, text='Envrionment : ')
+        self.var_env = tk.DoubleVar(value=0)
+        self.rb_env1 = ctk.CTkRadioButton(self.leftFrame, text='Cartpole', variable=self.var_env, value=0)
+        self.rb_env2 = ctk.CTkRadioButton(self.leftFrame, text='Car Racing', variable=self.var_env, value=1)
         
         self.var_mem = tk.IntVar(value=1)
         self.rb_mem = ctk.CTkCheckBox(self.leftFrame, text='permanently store initial experience', variable=self.var_mem, onvalue=1, offvalue=1)
@@ -70,7 +77,8 @@ class display:
         self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Verbose')
         self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
         
-        self.radiobuttons = [self.rb_exr1, self.rb_exr2, self.rb_lr1, self.rb_lr2]
+        self.radiobuttons = [self.rb_exr1, self.rb_exr2, self.rb_lr1, self.rb_lr2,
+                             self.rb_env1, self.rb_env2]
         
         self.buttons = [self.but_train, self.but_test, self.but_reset,
                         self.but_save, self.but_load, self.but_log,
@@ -90,15 +98,19 @@ class display:
         self.rb_lr1.grid(row=1, column=1, padx=5, pady=5)
         self.rb_lr2.grid(row=1, column=2, padx=5, pady=5)
         
-        self.rb_mem.grid(row=2, column=1, padx=5, pady=5)
+        self.label_env.grid(row=2, column=0, padx=5, pady=5)
+        self.rb_env1.grid(row=2, column=1, padx=5, pady=5)
+        self.rb_env2.grid(row=2, column=2, padx=5, pady=5)
         
-        self.but_train.grid(row=3, column=1, padx=5, pady=5)
-        self.but_test.grid(row=4, column=1, padx=5, pady=5)
-        self.but_reset.grid(row=5, column=1, padx=5, pady=5)
-        self.but_save.grid(row=6, column=1, padx=5, pady=5)
-        self.but_load.grid(row=7, column=1, padx=5, pady=5)
-        self.but_log.grid(row=8, column=1, padx=5, pady=5)
-        self.but_play.grid(row=9, column=1, padx=5, pady=5)
+        self.rb_mem.grid(row=3, column=1, padx=5, pady=5)
+        
+        self.but_train.grid(row=4, column=1, padx=5, pady=5)
+        self.but_test.grid(row=5, column=1, padx=5, pady=5)
+        self.but_reset.grid(row=6, column=1, padx=5, pady=5)
+        self.but_save.grid(row=7, column=1, padx=5, pady=5)
+        self.but_load.grid(row=8, column=1, padx=5, pady=5)
+        self.but_log.grid(row=9, column=1, padx=5, pady=5)
+        self.but_play.grid(row=10, column=1, padx=5, pady=5)
         
         self.label_nn.grid(row=0, column=0, padx=5, pady=5)
         self.canvas_nn.grid(row=1, column=0, padx=5, pady=5)
@@ -132,6 +144,7 @@ class display:
     def reset(self):
         self.var_exr.set(value=1)
         self.var_lr.set(value=0.001)
+        self.var_env.set(value=0)
         self.var_mem.set(value=1)
         self.canvas_nn.delete("all")
         self.canvas_plot.get_tk_widget().delete("all")
@@ -160,26 +173,41 @@ class display:
             i.configure(state="disabled")
         self.rb_mem.configure(state="disabled")
         
-        log = csv_log(file_type='train')
-        
         self.rewards = []
         self.ax = self.fig.add_subplot(111)
         
         cwd = os.getcwd()
-        path = os.path.join(cwd,'Videos')
-        if os.path.exists(path) == False:
-            os.mkdir(path)
-            
-        env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
-                                       video_folder=path, episode_trigger = lambda x: x % 2 == 0,
-                                       name_prefix='train')
-        env.seed(5)
-        observation_space = env.observation_space.shape[0]
-        action_space = env.action_space.n
-        self.agent = DQN_Agent(observation_space, action_space, exploration_rate=self.var_exr.get(), 
-                               learning_rate=self.var_lr.get(), memory_type=self.var_mem.get())
         
-        self.image = tk.PhotoImage(file = 'model_plot.png')
+        if self.var_env.get() == 0:
+            path = os.path.join(cwd, r'Cartpole\Videos')
+            if os.path.exists(path) == False:
+                os.makedirs(path)
+            env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
+                                           video_folder=path, episode_trigger = lambda x: x % 2 == 0,
+                                           name_prefix='train')
+            env.seed(5)
+            observation_space = env.observation_space.shape[0]
+            action_space = env.action_space.n
+            log = csv_log(env=0, file_type='train')
+        elif self.var_env.get()==1:
+            path = os.path.join(cwd, r'CarRacing\Videos')
+            if os.path.exists(path) == False:
+                os.makedirs(path)
+            env = gym.wrappers.RecordVideo(CarRacing(continuous=True, render_mode='rgb_array'), 
+                                           video_folder=path, episode_trigger = lambda x: x % 2 == 0,
+                                           name_prefix='train')
+            observation_space = [96, 96, 5]
+            action_space = [(0, 1, 0), (-1, 0, 0), (0, 0, 0), #           Action Space Structure
+                            (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
+                                                              # Range        -1~1       0~1   0~1
+            log = csv_log(env=1, file_type='train')
+        self.agent = DQN_Agent(observation_space, action_space, exploration_rate=self.var_exr.get(), 
+                               learning_rate=self.var_lr.get(), memory_type=self.var_mem.get(), 
+                               env=self.var_env.get())
+        if self.var_env.get() == 0:
+            self.image = tk.PhotoImage(file = r'Cartpole\DQN_model\model_plot.png')
+        elif self.var_env.get() == 1:
+            self.image = tk.PhotoImage(file = r'CarRacing\DQN_model\model_plot.png')
         self.canvas_nn.create_image(172, 265, image=self.image)
         self.canvas_nn.update()
         
@@ -187,37 +215,73 @@ class display:
         done = False
         while run < 100 and done == False:
             run += 1
-            state = env.reset()
-            state = np.reshape(state, [1, observation_space])
-            step = 0
+            if self.var_env.get() == 0:
+                state = env.reset()
+                state = np.reshape(state, [1, observation_space])
+            elif self.var_env.get() == 1:
+                state = env.reset(seed=10)
+                state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
+                state = state.astype(float)
+                state /= 255.0
+                frame_stack = deque([state]*5, maxlen=5)
+            total_rewards = 0
             while True:
-                env.render()  
-                action = self.agent.policy(state)
-                state_next, reward, terminal, info = env.step(action)
-                #reward = reward if not terminal else -reward
-                reward = -100*(abs(state_next[2]) - abs(state[0][2]))
-                state_next = np.reshape(state_next, [1, observation_space])
-                self.agent.remember(state, action, reward, state_next, terminal)
-                state = state_next
-                step += 1
-                if terminal:
-                    verbose = "Episodes: " + str(run) + ", Exploration: " + str(self.agent.exploration_rate) + ", Score: " + str(step) + '\n'
+                #env.render()
+                if self.var_env.get() == 0:
+                    action = self.agent.policy(state)
+                    state_next, reward, terminal, info = env.step(action)
+                    reward = -100*(abs(state_next[2]) - abs(state[0][2]))
+                    state_next = np.reshape(state_next, [1, observation_space])
+                    self.agent.remember(state, action, reward, state_next, terminal)
+                    state = state_next
+                    total_rewards += 1
+                
+                elif self.var_env.get() == 1:
+                    cur_frame_stack = np.array(frame_stack)
+                    cur_frame_stack = np.transpose(cur_frame_stack, (1, 2, 0))
+                    cur_frame_stack = np.expand_dims(cur_frame_stack, axis=0)
+                    action = self.agent.policy(cur_frame_stack)
+            
+                    reward = 0
+                    for i in range(3):
+                        state_next, r, terminal, info = env.step(action_space[action])
+                        reward += r
+                        if terminal:
+                            break
+        
+                    if action_space[action][1] == 1 and reward > 0:
+                        reward = 1.2*reward
+                    total_rewards += reward
+            
+                    state_next = cv2.cvtColor(state_next, cv2.COLOR_BGR2GRAY)
+                    state_next = state_next.astype(float)
+                    state_next /= 255.0
+                    frame_stack.append(state_next)
+                    next_frame_stack = np.array(frame_stack)
+                    next_frame_stack = np.transpose(next_frame_stack, (1, 2, 0))
+                    self.agent.remember(cur_frame_stack, action, reward, next_frame_stack, terminal)
+                
+                if terminal or total_rewards < 0:
+                    verbose = "Episodes: " + str(run) + ", Exploration: " + str(self.agent.exploration_rate) + ", Score: " + str(total_rewards) + '\n'
                     print(verbose)
                     self.txtbox.insert(tk.END, verbose)
                     self.txtbox.update()
-                    self.rewards.append(step)
+                    self.rewards.append(total_rewards)
                     self.animate()
                     self.canvas_plot.draw()
-                    if run >= 5 and mean(self.rewards[-4:]) >= 195:
-                        self.agent.save()
-                        done = True
-                        print("Training Completed!")
+                    if self.var_env.get() == 0:
+                        if run >= 5 and mean(self.rewards[-4:]) >= 195:
+                            done = True
+                    elif self.var_env.get() == 1:
+                        if run >= 5 and mean(self.rewards[-4:]) >= 1000:
+                            done = True
                     break
-                log.write(run, state, action, reward, step)
+                log.write(run, state, action, reward, total_rewards)
                 self.agent.experience_replay()
+        self.agent.save()
+        print("Training Completed!")
         env.close()
         log.close()
-        #ani._stop()
         for i in self.buttons:
             i.configure(state="normal")
         for i in self.radiobuttons:
@@ -231,42 +295,89 @@ class display:
             i.configure(state="disabled")
         self.rb_mem.configure(state="disabled")
         
-        log = csv_log(file_type='test')
-        
         cwd = os.getcwd()
-        path = os.path.join(cwd,'Videos')
-        if os.path.exists(path) == False:
-            os.mkdir(path)
         
-        self.agent = DQN_Agent(load=True)
+        self.agent = DQN_Agent(load=True, env=self.var_env.get())
         model = self.agent.get_model()
+                
+        if self.var_env.get() == 0:
+            path = os.path.join(cwd, r'Cartpole\Videos')
+            if os.path.exists(path) == False:
+                os.makedirs(path)
+            env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
+                                           video_folder=path, episode_trigger = lambda x: True,
+                                           name_prefix='train')
+            env.seed(5)
+            observation_space = env.observation_space.shape[0]
+            action_space = env.action_space.n
+            log = csv_log(env=0, file_type='test')
+            self.image = tk.PhotoImage(file = r'Cartpole/DQN_model/model_plot.png')
+        elif self.var_env.get()==1:
+            path = os.path.join(cwd, r'CarRacing\Videos')
+            if os.path.exists(path) == False:
+                os.makedirs(path)
+            env = gym.wrappers.RecordVideo(CarRacing(continuous=True, render_mode='rgb_array'), 
+                                           video_folder=path, episode_trigger = lambda x: True,
+                                           name_prefix='test')
+            observation_space = [96, 96, 5]
+            action_space = [(0, 1, 0), (-1, 0, 0), (0, 0, 0), #           Action Space Structure
+                            (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
+                                                              # Range        -1~1       0~1   0~1
+            log = csv_log(env=1, file_type='test')
+            self.image = tk.PhotoImage(file = r'CarRacing\DQN_model\model_plot.png')
         
-        self.image = tk.PhotoImage(file = 'model_plot.png')
         self.canvas_nn.create_image(172, 265, image=self.image)
         self.canvas_nn.update()
         
-        env = gym.wrappers.RecordVideo(gym.make('CartPole-v0', render_mode='rgb_array'), 
-                                       video_folder=path, episode_trigger = lambda x: True,
-                                       name_prefix='test')
-        observation_space = env.observation_space.shape[0]
         for episodes in range(1,6):
-            state = env.reset()
-            state = np.reshape(state, [1, observation_space])
             done = False
-            step = 0
+            if self.var_env.get() == 0:
+                state = env.reset()
+                state = np.reshape(state, [1, observation_space])
+            elif self.var_env.get() == 1:
+                state = env.reset(seed=10)
+                state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
+                state = state.astype(float)
+                state /= 255.0
+                frame_stack = deque([state]*5, maxlen=5)
+            total_rewards = 0
             while not done:
-                env.render()
-                action = np.argmax(model.predict(state, verbose=0))
-                next_state, reward, done, _ = env.step(action)
-                state = np.reshape(next_state, [1, observation_space])
-                step += 1
+                #env.render()
+                if self.var_env.get() == 0:
+                    action = np.argmax(model.predict(state, verbose=0))
+                    state_next, reward, done, info = env.step(action)
+                    reward = -100*(abs(state_next[2]) - abs(state[0][2]))
+                    state = np.reshape(state_next, [1, observation_space])
+                    total_rewards += 1
+                elif self.var_env.get() == 1:
+                    cur_frame_stack = np.array(frame_stack)
+                    cur_frame_stack = np.transpose(cur_frame_stack, (1, 2, 0))
+                    cur_frame_stack = np.expand_dims(cur_frame_stack, axis=0)
+                    action = np.argmax(model.predict(cur_frame_stack, verbose=0))
+            
+                    reward = 0
+                    for i in range(3):
+                        state_next, r, done, info = env.step(action_space[action])
+                        reward += r
+                        if done:
+                            break
+        
+                    if action_space[action][1] == 1 and reward > 0:
+                        reward = 1.2*reward
+                    total_rewards += reward
+            
+                    state_next = cv2.cvtColor(state_next, cv2.COLOR_BGR2GRAY)
+                    state_next = state_next.astype(float)
+                    state_next /= 255.0
+                    frame_stack.append(state_next)
+                    
                 if done:
-                    verbose = "Episodes: " + str(episodes) + ", Score: " + str(step) + '\n'
+                    verbose = "Episodes: " + str(episodes) + ", Score: " + str(total_rewards) + '\n'
                     print(verbose)
                     self.txtbox.insert(tk.END, verbose)
                     self.txtbox.update()
                     break
-                log.write(episodes, state, action, reward, step)
+                log.write(episodes, state, action, reward, total_rewards)
         env.close()
         log.close()
         for i in self.buttons:
@@ -294,8 +405,13 @@ class display:
             i.configure(state="disabled")
         self.rb_mem.configure(state="disabled")
         
-        mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
-        play(gym.make("CartPole-v0"), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
+        if self.var_env.get() == 0:
+            mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
+            play(gym.make("CartPole-v0"), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
+        elif self.var_env.get() == 1:
+            mapping = {(pygame.K_LEFT,): [1, 0, 0], (pygame.K_RIGHT,): [-1, 0, 0],
+                       (pygame.K_UP,): [0, 1, 0], (pygame.K_DOWN,): [0, 0, 0.5]}
+            play(CarRacing(continuous=True), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
         
         for i in self.buttons:
             i.configure(state = "normal")
