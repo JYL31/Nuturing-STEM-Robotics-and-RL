@@ -142,7 +142,8 @@ def play(
     keys_to_action: Optional[Dict[Union[Tuple[Union[str, int]], str], ActType]] = None,
     seed: Optional[int] = None,
     noop: ActType = 0,
-    txtbox: Optional = None
+    txtbox: Optional = None,
+    continuous: Optional[bool] = False
 ):
     """Allows one to play the game using keyboard.
 
@@ -218,7 +219,10 @@ def play(
     deprecation(
         "`play.py` currently supports only the old step API which returns one boolean, however this will soon be updated to support only the new step api that returns two bools."
     )
-
+    
+    if continuous:
+        noop = [0, 0, 0]
+    
     env.reset(seed=seed)
 
     if keys_to_action is None:
@@ -239,7 +243,7 @@ def play(
             sorted(ord(key) if isinstance(key, str) else key for key in key_combination)
         )
         key_code_to_action[key_code] = action
-
+    
     game = PlayableGame(env, key_code_to_action, zoom)
 
     if fps is None:
@@ -265,7 +269,10 @@ def play(
             else:
                 action = key_code_to_action.get(tuple(sorted(game.pressed_keys)), noop)
                 #prev_obs = obs
-                obs, rew, done, info = env.step(action)
+                if continuous:
+                    obs, rew, done, info, _ = env.step(action)
+                else:
+                    obs, rew, done, info = env.step(action)
                 total_reward += rew
         if obs is not None:
             # TODO: this needs to be updated when the render API change goes through

@@ -482,7 +482,7 @@ class CarRacing(gym.Env, EzPickle):
     def reset(
         self,
         *,
-        seed: Optional[int] = None,
+        seed: Optional[int] = 10,
         return_info: bool = False,
         options: Optional[dict] = None,
     ):
@@ -562,6 +562,7 @@ class CarRacing(gym.Env, EzPickle):
                 # This should not be treated as a failure
                 # but like a timeout
                 truncated = True
+                terminated = True
             x, y = self.car.hull.position
             if abs(x) > PLAYFIELD or abs(y) > PLAYFIELD:
                 terminated = True

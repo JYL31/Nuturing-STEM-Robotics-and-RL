@@ -409,9 +409,10 @@ class display:
             mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
             play(gym.make("CartPole-v0"), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
         elif self.var_env.get() == 1:
-            mapping = {(pygame.K_LEFT,): [1, 0, 0], (pygame.K_RIGHT,): [-1, 0, 0],
+            mapping = {(pygame.K_LEFT,): [-1, 0, 0], (pygame.K_RIGHT,): [1, 0, 0],
                        (pygame.K_UP,): [0, 1, 0], (pygame.K_DOWN,): [0, 0, 0.5]}
-            play(CarRacing(continuous=True), fps = 15, keys_to_action = mapping, txtbox = self.txtbox)
+            play(CarRacing(continuous=True), fps = 15, keys_to_action = mapping,
+                 txtbox = self.txtbox, seed=10, continuous=True)
         
         for i in self.buttons:
             i.configure(state = "normal")
