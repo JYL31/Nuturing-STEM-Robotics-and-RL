@@ -30,7 +30,7 @@ class csv_log:
         if self.env == 0:
             header = ['Episode Number', 'Cart Position', 'Cart Velocity', 'Pole Angle', 'Pole Angular Velocity', 'Action', 'Reward', 'Score']
         elif self.env == 1:
-            header = ['Episode Number', 'Action', 'Reward', 'Score']
+            header = ['Episode Number', 'Car x Coordinates', 'Car y Coordinates','Action', 'Reward', 'Score']
         self.writer = csv.writer(self.file)
         self.writer.writerow(header)
     
@@ -38,7 +38,7 @@ class csv_log:
         if self.env == 0:
             self.writer.writerow([episode, state[0][0], state[0][1], state[0][2], state[0][3], action, reward, total_reward])
         elif self.env == 1:
-            self.writer.writerow([episode, action, reward, total_reward])
+            self.writer.writerow([episode, state[0], state[1], action, reward, total_reward])
         
     def close(self):
         self.file.close()

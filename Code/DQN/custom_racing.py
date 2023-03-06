@@ -517,7 +517,6 @@ class CarRacing(gym.Env, EzPickle):
                     "instances of this message)"
                 )
         self.car = Car(self.world, *self.track[0][1:4])
-
         self.renderer.reset()
         if not return_info:
             return self.step(None)[0]
@@ -541,7 +540,7 @@ class CarRacing(gym.Env, EzPickle):
                 self.car.gas(0.2 * (action == 3))
                 self.car.brake(0.8 * (action == 4))
 
-        grass = self.car.step(1.0 / FPS)
+        grass, hull_pos = self.car.step(1.0 / FPS)
         self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
         self.t += 1.0 / FPS
 
@@ -572,7 +571,7 @@ class CarRacing(gym.Env, EzPickle):
                 step_reward = -10
 
         self.renderer.render_step()
-        return self.state, step_reward, terminated, truncated, {}
+        return [self.state, hull_pos], step_reward, terminated, truncated, {}
 
     def render(self, mode: str = "human"):
         if self.render_mode is not None:

@@ -100,6 +100,7 @@ def train_network():
 
     env = gym.wrappers.RecordVideo(CarRacing(continuous=True, render_mode='rgb_array'), 
                                        video_folder=path, name_prefix='train', episode_trigger = lambda x: x % 2 == 0)
+    #env = CarRacing(continuous=True, render_mode='human')
     
     observation_space = env.observation_space.shape
 
@@ -109,8 +110,8 @@ def train_network():
                                                       
     agent = DQN_Agent(observation_space, action_space)
     run = 0
-    file = open('E:/Melb Uni/Capstone/Racing/results.csv', 'w', newline='')
-    writer = csv.writer(file)
+    #file = open('E:/Melb Uni/Capstone/Racing/results.csv', 'w', newline='')
+    #writer = csv.writer(file)
 
     while run < 100:
         run += 1
@@ -128,7 +129,7 @@ def train_network():
             
             reward = 0
             for i in range(3):
-                state_next, r, terminal, info = env.step(action_space[action])
+                state_next, r, terminal, info, car_pos = env.step(action_space[action])
                 reward += r
                 if terminal:
                     break
@@ -149,11 +150,11 @@ def train_network():
             if terminal or total_rewards < 0:
                 verbose = "Episodes: " + str(run) + ", Exploration: " + str(agent.exploration_rate) + ", Score: " + str(total_rewards) + '\n'
                 print(verbose)
-                writer.writerow([agent.exploration_rate, total_rewards])
+                #writer.writerow([agent.exploration_rate, total_rewards])
                 
                 break
             agent.experience_replay()
-    file.close()
+    #file.close()
 
 train_network()
 

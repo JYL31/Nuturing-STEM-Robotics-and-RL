@@ -259,7 +259,7 @@ class Car:
                 ),
                 True,
             )
-        return grass
+        return grass, list(self.hull.worldCenter)
 
     def draw(self, surface, zoom, translation, angle, draw_particles=True):
         import pygame.draw

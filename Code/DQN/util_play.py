@@ -270,7 +270,7 @@ def play(
                 action = key_code_to_action.get(tuple(sorted(game.pressed_keys)), noop)
                 #prev_obs = obs
                 if continuous:
-                    obs, rew, done, info, _ = env.step(action)
+                    obs, rew, done, info, car_pos, _ = env.step(action)
                 else:
                     obs, rew, done, info = env.step(action)
                 total_reward += rew

@@ -220,7 +220,7 @@ class display:
                 state = np.reshape(state, [1, observation_space])
             elif self.var_env.get() == 1:
                 state = env.reset(seed=10)
-                state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
+                state = cv2.cvtColor(state[0], cv2.COLOR_BGR2GRAY)
                 state = state.astype(float)
                 state /= 255.0
                 frame_stack = deque([state]*5, maxlen=5)
@@ -248,6 +248,8 @@ class display:
                         reward += r
                         if terminal:
                             break
+                    state = state_next[1] # car position
+                    state_next = state_next[0]
         
                     if action_space[action][1] == 1 and reward > 0:
                         reward = 1.2*reward
@@ -336,7 +338,7 @@ class display:
                 state = np.reshape(state, [1, observation_space])
             elif self.var_env.get() == 1:
                 state = env.reset(seed=10)
-                state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
+                state = cv2.cvtColor(state[0], cv2.COLOR_BGR2GRAY)
                 state = state.astype(float)
                 state /= 255.0
                 frame_stack = deque([state]*5, maxlen=5)
@@ -361,6 +363,8 @@ class display:
                         reward += r
                         if done:
                             break
+                    state = state_next[1]
+                    state_next = state_next[0]
         
                     if action_space[action][1] == 1 and reward > 0:
                         reward = 1.2*reward
