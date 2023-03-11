@@ -1,4 +1,4 @@
-# raspberry pi
+# Raspberry Pi
 
 ## Cart Pole
 
