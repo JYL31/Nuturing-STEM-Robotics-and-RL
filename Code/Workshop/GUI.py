@@ -5,7 +5,6 @@ Created on Thu Dec 22 11:53:18 2022
 @author: Jiayuan Liu
 """
 
-import gym
 import cv2
 import pygame
 import random
@@ -15,6 +14,7 @@ import numpy as np
 import pandas as pd
 from keras.models import load_model
 from collections import deque
+from cartpole import CartPoleEnv
 from custom_racing import CarRacing
 from util_play import play
 from Log_Veiwer import log_viewer
@@ -30,6 +30,7 @@ class display:
         self.container.resizable(0, 0)
         self.fig = fig
         self.model = None
+        self.loaded = False
 
     def setup(self):
         self.create_widgets()
@@ -47,6 +48,11 @@ class display:
         self.rb_lr1 = ctk.CTkRadioButton(self.leftFrame, text='0.001', variable=self.var_lr, value=0.001)
         self.rb_lr2 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_lr, value=0.1)
         
+        self.label_r = ctk.CTkLabel(self.leftFrame, text='Reward engineering : ')
+        self.var_r = tk.IntVar(value=1)
+        self.rb_r1 = ctk.CTkRadioButton(self.leftFrame, text='angle difference', variable=self.var_r, value=1)
+        self.rb_r2 = ctk.CTkRadioButton(self.leftFrame, text='+1 each step', variable=self.var_r, value=0)
+        
         self.label_env = ctk.CTkLabel(self.leftFrame, text='Envrionment : ')
         self.var_env = tk.DoubleVar(value=0)
         self.rb_env1 = ctk.CTkRadioButton(self.leftFrame, text='Cartpole', variable=self.var_env, value=0)
@@ -56,9 +62,6 @@ class display:
         self.var_fps = tk.DoubleVar(value=15)
         self.rb_fps1 = ctk.CTkRadioButton(self.leftFrame, text='15', variable=self.var_fps, value=15)
         self.rb_fps2 = ctk.CTkRadioButton(self.leftFrame, text='50', variable=self.var_fps, value=50)
-        
-        self.var_r = tk.IntVar(value=1)
-        self.rb_r = ctk.CTkCheckBox(self.leftFrame, text='Reward Engineering', variable=self.var_r, onvalue=1, offvalue=0)
         
         self.but_train = ctk.CTkButton(self.leftFrame, text='Start Training', command=self.train_network)
         self.but_test = ctk.CTkButton(self.leftFrame, text='Start Testing', command=self.test_network, state="disabled")
@@ -79,7 +82,8 @@ class display:
         self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Verbose')
         self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
         
-        self.radiobuttons = [self.rb_lr1, self.rb_lr2, self.rb_env1, self.rb_env2, self.rb_fps1, self.rb_fps2]
+        self.radiobuttons = [self.rb_lr1, self.rb_lr2, self.rb_r1, self.rb_r2,
+                             self.rb_env1, self.rb_env2, self.rb_fps1, self.rb_fps2]
         
         self.buttons = [self.but_train, self.but_test, self.but_reset,
                         self.but_load, self.but_log, self.but_play, self.but_replay]
@@ -94,15 +98,17 @@ class display:
         self.rb_lr1.grid(row=0, column=1, padx=5, pady=5)
         self.rb_lr2.grid(row=0, column=2, padx=5, pady=5)
         
-        self.label_env.grid(row=1, column=0, padx=5, pady=5)
-        self.rb_env1.grid(row=1, column=1, padx=5, pady=5)
-        self.rb_env2.grid(row=1, column=2, padx=5, pady=5)
+        self.label_r.grid(row=1, column=0, padx=5, pady=5)
+        self.rb_r1.grid(row=1, column=1, padx=5, pady=5)
+        self.rb_r2.grid(row=1, column=2, padx=5, pady=5)
         
-        self.label_fps.grid(row=2, column=0, padx=5, pady=5)
-        self.rb_fps1.grid(row=2, column=1, padx=5, pady=5)
-        self.rb_fps2.grid(row=2, column=2, padx=5, pady=5)
+        self.label_env.grid(row=2, column=0, padx=5, pady=5)
+        self.rb_env1.grid(row=2, column=1, padx=5, pady=5)
+        self.rb_env2.grid(row=2, column=2, padx=5, pady=5)
         
-        self.rb_r.grid(row=3, column=1, padx=5, pady=5)
+        self.label_fps.grid(row=3, column=0, padx=5, pady=5)
+        self.rb_fps1.grid(row=3, column=1, padx=5, pady=5)
+        self.rb_fps2.grid(row=3, column=2, padx=5, pady=5)
         
         self.but_train.grid(row=4, column=1, padx=5, pady=5)
         self.but_test.grid(row=5, column=1, padx=5, pady=5)
@@ -130,6 +136,7 @@ class display:
         self.txtbox.pack(side='bottom')
                         
     def load(self):
+        self.loaded = True
         self.env_type = self.var_env.get()
 
         if self.var_env.get() == 0:
@@ -141,6 +148,14 @@ class display:
             name = "lr{}".format(self.var_lr.get())
             self.model = load_model("CarRacing\{}".format(name))
             self.model_plot = tk.PhotoImage(file = r'CarRacing\model_plot.png')
+        
+        reward_type = "angle difference" if self.var_r.get()==1 else "+1 each step"
+        verbose = "Loaded model with training parameters: \n\
+            --Reward Engineering: {}\n\
+            --Learning rate: {}\n".format(reward_type, self.var_lr.get())
+        print(verbose)
+        self.txtbox.insert(tk.END, verbose)
+        self.txtbox.update()
         
         self.canvas_nn.create_image(172, 265, image=self.model_plot)
         self.canvas_nn.update()
@@ -161,16 +176,17 @@ class display:
             self.ax.clear()
             self.canvas_plot.draw()
         self.txtbox.delete("1.0", "end")
+        self.entry.delete("0", "end")
         
         for i in self.buttons:
             i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal")
-        self.rb_r.configure(state="normal")
         self.but_test.configure(state="disabled")
         self.but_replay.configure(state="disabled")
         
         self.model = None
+        self.load = False
     
     def animate(self):
         self.ax.clear()
@@ -185,7 +201,6 @@ class display:
             i.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
-        self.rb_r.configure(state="disabled")
         
         self.canvas_nn.delete("all")
         if hasattr(self, 'ax'):
@@ -204,7 +219,7 @@ class display:
             data_dir = "Cartpole/Logs/{}.csv".format(name)
             self.model = load_model("Cartpole\{}".format(name))
             self.model_plot = tk.PhotoImage(file = r'Cartpole\model_plot.png')
-            env = gym.make('CartPole-v0', render_mode='human')
+            env = CartPoleEnv(render_mode='human')
         else:
             name = "lr{}".format(self.var_lr.get())
             data_dir = "CarRacing/Logs/{}.csv".format(name)
@@ -230,7 +245,7 @@ class display:
             i = 0
             terminal = False
             while True:
-                if episode % 4 == 0:
+                if episode % 5 == 0:
                     env.render()
                     action = episode_data["Action"].iloc[i]
                     if env_type == 1:
@@ -240,9 +255,9 @@ class display:
                             if terminal:
                                 break
                     else:
-                        _, _, terminal, _ = env.step(action)
+                        _, _, terminal, _, _ = env.step(action)
                 score = episode_data["Score"].iloc[i]
-                if terminal or episode % 4 != 0 or score < 0:
+                if terminal or episode % 5 != 0 or score < 0:
                     score = episode_data["Score"].iloc[-1]
                     exploration_rate = episode_data["Exploration Rate"].iloc[-1]
                     verbose = "Episodes: {0}, Exploration: {1:.4f}, Score: {2:.2f}\n".format(episode, exploration_rate, score)
@@ -265,7 +280,6 @@ class display:
                 i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal")
-        self.rb_r.configure(state="normal")
 
 
     def test_network(self):
@@ -273,7 +287,6 @@ class display:
             i.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
-        self.rb_r.configure(state="disabled")
         
         self.canvas_nn.delete("all")
         if hasattr(self, 'ax'):
@@ -281,13 +294,13 @@ class display:
             self.canvas_plot.draw()
         self.txtbox.delete("1.0", "end")
         
-        try:
+        if self.loaded:
+            env_type = self.env_type
+        else:
             env_type = self.para[3]
-        except:
-            env_type = self.env_type 
             
         if env_type == 0:
-            env = gym.make('CartPole-v0', render_mode='human')
+            env = CartPoleEnv(render_mode='human')
             observation_space = env.observation_space.shape[0]
             state = env.reset(seed=5)
             state = np.reshape(state, [1, observation_space])
@@ -310,7 +323,7 @@ class display:
             env.render()
             if env_type == 0:
                 action = np.argmax(self.model.predict(state, verbose=0))
-                state_next, reward, terminal, info = env.step(action)
+                state_next, reward, terminal, info, _ = env.step(action)
                 reward = -100*(abs(state_next[2]) - abs(state[0][2]))
                 state = np.reshape(state_next, [1, observation_space])
                 score += 1
@@ -349,7 +362,6 @@ class display:
             i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal") 
-        self.rb_r.configure(state="normal")
         
         if hasattr(self, 'para')==False:
             self.but_replay.configure(state="disabled")
@@ -373,7 +385,6 @@ class display:
             i.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
-        self.rb_r.configure(state="disabled")
         
         self.canvas_nn.delete("all")
         if hasattr(self, 'ax'):
@@ -390,7 +401,7 @@ class display:
         
         if env_type == 0:
             mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
-            play(gym.make("CartPole-v0"), fps = self.var_fps.get(), keys_to_action = mapping, txtbox = self.txtbox)
+            play(CartPoleEnv(play=True), fps = self.var_fps.get(), keys_to_action = mapping, txtbox = self.txtbox)
         else:
             mapping = {(pygame.K_LEFT,): [-1, 0, 0], (pygame.K_RIGHT,): [1, 0, 0],
                        (pygame.K_UP,): [0, 1, 0], (pygame.K_DOWN,): [0, 0, 0.5]}
@@ -401,7 +412,6 @@ class display:
             i.configure(state = "normal")
         for i in self.radiobuttons:
             i.configure(state = "normal") 
-        self.rb_r.configure(state = "normal")
         if self.model == None:
             self.but_test.configure(state="disabled")
             self.but_replay.configure(state="disabled")
@@ -411,7 +421,6 @@ class display:
             i.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
-        self.rb_r.configure(state="disabled")
         
         self.canvas_nn.delete("all")
         if hasattr(self, 'ax'):
@@ -432,13 +441,12 @@ class display:
                 i.configure(state="normal")
             for i in self.radiobuttons:
                 i.configure(state="normal")
-                self.rb_r.configure(state="normal")
             return
         
         env_type = self.para[3]
         
         if env_type == 0:
-            env = gym.make('CartPole-v0', render_mode='human')
+            env = CartPoleEnv(render_mode='human')
             env.reset(seed=5)
             data_dir = "Cartpole/Logs/r{}_lr{}_{}.csv".format(self.para[0], self.para[1], self.para[2])
             data = pd.read_csv(data_dir)
@@ -452,9 +460,10 @@ class display:
         
         data = pd.read_csv(data_dir)
         
+        reward_type = "angle difference" if self.para[0]==1 else "+1 each step"
         verbose = "Replaying Episode {} from last training instance with settings: \n\
             --Reward Engineering: {}\n\
-                --Learning rate: {}\n".format(episode, self.para[0], self.para[1])
+            --Learning rate: {}\n".format(episode, reward_type, self.para[1])
         print(verbose)
         self.txtbox.insert(tk.END, verbose)
         self.txtbox.update()
@@ -465,7 +474,7 @@ class display:
         episode_data = data.loc[data["Episode Number"]==episode]
         i = 0
         while True:
-            env.render()
+            env.render(episode=episode)
             action = episode_data["Action"].iloc[i]
             if env_type == 1:
                 action = action_space[action]
@@ -474,7 +483,7 @@ class display:
                     if terminal:
                         break
             else:
-                _, _, terminal, _ = env.step(action)
+                _, _, terminal, _, _ = env.step(action)
             if terminal:
                 score = episode_data["Score"].iloc[-1]
                 exploration_rate = episode_data["Exploration Rate"].iloc[-1]
@@ -494,7 +503,6 @@ class display:
             i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal")
-        self.rb_r.configure(state="normal")
         
         
 
