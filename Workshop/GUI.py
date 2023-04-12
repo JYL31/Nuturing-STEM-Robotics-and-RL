@@ -186,7 +186,7 @@ class display:
         self.but_replay.configure(state="disabled")
         
         self.model = None
-        self.load = False
+        self.loaded = False
     
     def animate(self):
         self.ax.clear()
@@ -280,6 +280,7 @@ class display:
                 i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal")
+        self.loaded = False
 
 
     def test_network(self):
@@ -474,7 +475,10 @@ class display:
         episode_data = data.loc[data["Episode Number"]==episode]
         i = 0
         while True:
-            env.render(episode=episode)
+            if env_type == 0:
+                env.render(episode=episode)
+            else:
+                env.render()
             action = episode_data["Action"].iloc[i]
             if env_type == 1:
                 action = action_space[action]
