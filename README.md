@@ -39,13 +39,19 @@ python main.py
 # Cartpole-v0 using DQN
 ![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Img/cartpole_eg.gif "agent play cartpole")
 ![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Code/Workshop/Cartpole/model_plot.png "network model for cartpole")
+
 Simple fully connected neural network model.
+
 * **Input:** cart position, cart velocity, pole angle, pole angular velocity
+
 * **Output:** action 0: left, 1: right
 
 # CarRacing-v2 using DQN
 ![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Img/car_racing_eg.gif "agent play car racing")
-![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Code/Workshop/CartRacing/model_plot.png "network model for car racing")
+![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Code/Workshop/CarRacing/model_plot.png "network model for car racing")
+
 Standard convolution neural network model (CNN).
+
 * **Input:** a stack of 96-by-96 pixels image in 5 consecutive frames
+
 * **Output:** action (steering, gas, break): \[(0, 1, 0), (-1, 0, 0), (0, 0, 0), (1, 0, 0), (0, 0, 0.5)\]
