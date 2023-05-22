@@ -23,14 +23,11 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 
 class display:
     
-    def __init__(self, root, fig):
+    def __init__(self, root, fig, tab):
         self.container = root
-        self.container.title("Basic GUI Layout with Grid")
-        self.container.maxsize(1500,  900)
-        self.container.resizable(0, 0)
         self.fig = fig
         self.model = None
-        self.loaded = False
+        self.tab = tab
 
     def setup(self):
         self.create_widgets()
@@ -48,15 +45,11 @@ class display:
         self.rb_lr1 = ctk.CTkRadioButton(self.leftFrame, text='0.001', variable=self.var_lr, value=0.001)
         self.rb_lr2 = ctk.CTkRadioButton(self.leftFrame, text='0.1', variable=self.var_lr, value=0.1)
         
-        self.label_r = ctk.CTkLabel(self.leftFrame, text='Reward engineering : ')
-        self.var_r = tk.IntVar(value=1)
-        self.rb_r1 = ctk.CTkRadioButton(self.leftFrame, text='angle difference', variable=self.var_r, value=1)
-        self.rb_r2 = ctk.CTkRadioButton(self.leftFrame, text='+1 each step', variable=self.var_r, value=0)
-        
-        self.label_env = ctk.CTkLabel(self.leftFrame, text='Envrionment : ')
-        self.var_env = tk.DoubleVar(value=0)
-        self.rb_env1 = ctk.CTkRadioButton(self.leftFrame, text='Cartpole', variable=self.var_env, value=0)
-        self.rb_env2 = ctk.CTkRadioButton(self.leftFrame, text='Car Racing', variable=self.var_env, value=1)
+        if self.tab == 0:
+            self.label_r = ctk.CTkLabel(self.leftFrame, text='Reward engineering : ')
+            self.var_r = tk.IntVar(value=1)
+            self.rb_r1 = ctk.CTkRadioButton(self.leftFrame, text='angle difference', variable=self.var_r, value=1)
+            self.rb_r2 = ctk.CTkRadioButton(self.leftFrame, text='+1 each step', variable=self.var_r, value=0)
         
         self.label_fps = ctk.CTkLabel(self.leftFrame, text='FPS : ')
         self.var_fps = tk.DoubleVar(value=15)
@@ -81,9 +74,11 @@ class display:
         
         self.label_txt = ctk.CTkLabel(self.rightFrame2, text='Verbose')
         self.txtbox = ctk.CTkTextbox(self.rightFrame2, width=400, height=390)
-        
-        self.radiobuttons = [self.rb_lr1, self.rb_lr2, self.rb_r1, self.rb_r2,
-                             self.rb_env1, self.rb_env2, self.rb_fps1, self.rb_fps2]
+        if self.tab == 0:
+            self.radiobuttons = [self.rb_lr1, self.rb_lr2, self.rb_r1, self.rb_r2,
+                                 self.rb_fps1, self.rb_fps2]
+        else:
+            self.radiobuttons = [self.rb_lr1, self.rb_lr2, self.rb_fps1, self.rb_fps2]
         
         self.buttons = [self.but_train, self.but_test, self.but_reset,
                         self.but_load, self.but_log, self.but_play, self.but_replay]
@@ -94,30 +89,27 @@ class display:
         self.rightFrame.grid(row=0, column=2, padx=10, pady=5)
         self.rightFrame.grid_propagate(False)
         
-        self.label_lr.grid(row=0, column=0, padx=5, pady=5)
-        self.rb_lr1.grid(row=0, column=1, padx=5, pady=5)
-        self.rb_lr2.grid(row=0, column=2, padx=5, pady=5)
+        self.label_fps.grid(row=0, column=0, padx=5, pady=5)
+        self.rb_fps1.grid(row=0, column=1, padx=5, pady=5)
+        self.rb_fps2.grid(row=0, column=2, padx=5, pady=5)
         
-        self.label_r.grid(row=1, column=0, padx=5, pady=5)
-        self.rb_r1.grid(row=1, column=1, padx=5, pady=5)
-        self.rb_r2.grid(row=1, column=2, padx=5, pady=5)
+        self.label_lr.grid(row=1, column=0, padx=5, pady=5)
+        self.rb_lr1.grid(row=1, column=1, padx=5, pady=5)
+        self.rb_lr2.grid(row=1, column=2, padx=5, pady=5)
         
-        self.label_env.grid(row=2, column=0, padx=5, pady=5)
-        self.rb_env1.grid(row=2, column=1, padx=5, pady=5)
-        self.rb_env2.grid(row=2, column=2, padx=5, pady=5)
+        if self.tab == 0:
+            self.label_r.grid(row=2, column=0, padx=5, pady=5)
+            self.rb_r1.grid(row=2, column=1, padx=5, pady=5)
+            self.rb_r2.grid(row=2, column=2, padx=5, pady=5)
         
-        self.label_fps.grid(row=3, column=0, padx=5, pady=5)
-        self.rb_fps1.grid(row=3, column=1, padx=5, pady=5)
-        self.rb_fps2.grid(row=3, column=2, padx=5, pady=5)
-        
-        self.but_train.grid(row=4, column=1, padx=5, pady=5)
-        self.but_test.grid(row=5, column=1, padx=5, pady=5)
-        self.but_reset.grid(row=6, column=1, padx=5, pady=5)
-        self.but_load.grid(row=7, column=1, padx=5, pady=5)
-        self.but_log.grid(row=8, column=1, padx=5, pady=5)
-        self.but_play.grid(row=9, column=1, padx=5, pady=5)
-        self.but_replay.grid(row=10, column=1, padx=5, pady=5)
-        self.entry.grid(row=11, column=1, padx=5, pady=5)
+        self.but_train.grid(row=3, column=1, padx=5, pady=5)
+        self.but_test.grid(row=4, column=1, padx=5, pady=5)
+        self.but_reset.grid(row=5, column=1, padx=5, pady=5)
+        self.but_load.grid(row=6, column=1, padx=5, pady=5)
+        self.but_log.grid(row=7, column=1, padx=5, pady=5)
+        self.but_play.grid(row=8, column=1, padx=5, pady=5)
+        self.but_replay.grid(row=9, column=1, padx=5, pady=5)
+        self.entry.grid(row=10, column=1, padx=5, pady=5)
         
         self.label_nn.grid(row=0, column=0, padx=5, pady=5)
         self.canvas_nn.grid(row=1, column=0, padx=5, pady=5)
@@ -136,10 +128,8 @@ class display:
         self.txtbox.pack(side='bottom')
                         
     def load(self):
-        self.loaded = True
-        self.env_type = self.var_env.get()
 
-        if self.var_env.get() == 0:
+        if self.tab == 0:
             data_no = random.randrange(0,3)
             name = "r{}_lr{}_{}".format(self.var_r.get(), self.var_lr.get(), data_no)
             self.model = load_model("Cartpole\{}".format(name))
@@ -167,8 +157,8 @@ class display:
 
     def reset(self):
         self.var_lr.set(value=0.001)
-        self.var_env.set(value=0)
-        self.var_r.set(value=1)
+        if self.tab == 0:
+            self.var_r.set(value=1)
         self.var_fps.set(15)
 
         self.canvas_nn.delete("all")
@@ -186,7 +176,6 @@ class display:
         self.but_replay.configure(state="disabled")
         
         self.model = None
-        self.loaded = False
     
     def animate(self):
         self.ax.clear()
@@ -211,7 +200,7 @@ class display:
         self.rewards = []
         self.ax = self.fig.add_subplot(111)
         
-        env_type = self.var_env.get()
+        env_type = self.tab
         data_no = random.randrange(0,3)
 
         if env_type == 0:
@@ -220,6 +209,7 @@ class display:
             self.model = load_model("Cartpole\{}".format(name))
             self.model_plot = tk.PhotoImage(file = r'Cartpole\model_plot.png')
             env = CartPoleEnv(render_mode='human')
+            self.para = [self.var_r.get(), self.var_lr.get(), data_no]
         else:
             name = "lr{}".format(self.var_lr.get())
             data_dir = "CarRacing/Logs/{}.csv".format(name)
@@ -229,9 +219,8 @@ class display:
             action_space = [(0, 1, 0), (-1, 0, 0), (0, 0, 0), #           Action Space Structure
                             (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
                                                               # Range        -1~1       0~1   0~1
+            self.para = [self.var_lr.get(), data_no]
         data = pd.read_csv(data_dir)
-        
-        self.para = [self.var_r.get(), self.var_lr.get(), data_no, self.var_env.get()]
         
         self.canvas_nn.create_image(172, 265, image=self.model_plot)
         self.canvas_nn.update()
@@ -280,7 +269,6 @@ class display:
                 i.configure(state="normal")
         for i in self.radiobuttons:
             i.configure(state="normal")
-        self.loaded = False
 
 
     def test_network(self):
@@ -295,10 +283,7 @@ class display:
             self.canvas_plot.draw()
         self.txtbox.delete("1.0", "end")
         
-        if self.loaded:
-            env_type = self.env_type
-        else:
-            env_type = self.para[3]
+        env_type = self.tab
             
         if env_type == 0:
             env = CartPoleEnv(render_mode='human')
@@ -398,7 +383,7 @@ class display:
         self.txtbox.insert(tk.END, verbose)
         self.txtbox.update()
         
-        env_type = self.var_env.get()
+        env_type = self.tab
         
         if env_type == 0:
             mapping = {(pygame.K_LEFT,): 0, (pygame.K_RIGHT,): 1}
@@ -444,7 +429,7 @@ class display:
                 i.configure(state="normal")
             return
         
-        env_type = self.para[3]
+        env_type = self.tab
         
         if env_type == 0:
             env = CartPoleEnv(render_mode='human')
@@ -457,11 +442,13 @@ class display:
                             (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
                                                               # Range        -1~1       0~1   0~1
             env.reset(seed=10)
-            data_dir = "CarRacing/Logs/lr{}.csv".format(self.para[1])
+            data_dir = "CarRacing/Logs/lr{}.csv".format(self.para[0])
         
         data = pd.read_csv(data_dir)
-        
-        reward_type = "angle difference" if self.para[0]==1 else "+1 each step"
+        if env_type == 0:
+            reward_type = "angle difference" if self.para[0]==1 else "+1 each step"
+        else:
+            reward_type = "number of tiles passed"
         verbose = "Replaying Episode {} from last training instance with settings: \n\
             --Reward Engineering: {}\n\
             --Learning rate: {}\n".format(episode, reward_type, self.para[1])
