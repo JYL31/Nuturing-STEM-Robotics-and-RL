@@ -3,13 +3,20 @@ This repository includes the Python-based simulation program used in the robotic
 # Program
 The GUI is developed using [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter), a python UI-library based on Tkinter that provides a more modern theme. 
 The GUI contains two tabs for the two OpenAI Gym environments that the agent could play. They are [Cart Pole](https://www.gymlibrary.dev/environments/classic_control/cart_pole/), and [Car Racing](https://www.gymlibrary.dev/environments/box2d/car_racing/). Each tab has the same layout with 3 frames. The left frame contains the selectable training parameters, and buttons to perform various functions. For Cart Pole, the seletables are learning rate and types of reward. For Car Racing, the selectable is just learning rate. The FPS parameter is not used in training, but used when the environments are played by keyboard. The middle frame contains the canvas that will plot the neural network model. The right frame contains a canvas that will plot agent's cumlative rewards over training episodes in real time, and it also contains a text box to print out verbose. The GUI contains 7 functions in total:
+
 **Start Trianing:** Trains the agent with the chosen training parameters and envrionment over 100 episodes
 Note: due to time constraints, actual training is not possible, so the function is just a replay of training session that was done beforehand
+
 **Start Testing:** Test the agent in a new episode with the environment that it was trained in
+
 **Reset to Default:** Reset the training parameters to default values, clear out all plots, and delete the active agent if there is any
+
 **Load Network Model:** Load a pre-trained agent with the chosen training parameters and environment
+
 **Log:** Openup a table window to visualize the log content of a training session
+
 **Play:** Let user to play the chosen environment with the chosen FPS using keyboard. **SPACEBAR** to start, **ESC** to exit, **ARROW keys** to control.
+
 **Replay:** Replay a past training epsiode specified by the entry box below
 
 # Cartpole-v0 using DQN
