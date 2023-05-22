@@ -21,6 +21,21 @@ The GUI contains two tabs for the two OpenAI Gym environments that the agent cou
 
 **Replay:** Replay a past training epsiode specified by the entry box below
 
+## To Run the Program
+1. Clone the workshop branch
+```bash
+git clone -b workshop https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL.git
+```
+2. Use `Conda` to activate the python environment for the program
+```bash
+conda env create -f STEM_workshop.yml
+conda activate STEM_workshop
+```
+3. Run the Python script
+```bash
+python main.py
+```
+
 # Cartpole-v0 using DQN
 ![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Img/cartpole_eg.gif)
 
