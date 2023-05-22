@@ -1,6 +1,8 @@
 # Nuturing-STEM-Robotics-and-RL
 This repository includes the Python-based simulation program used in the robotics and reinforcement learning (RL) workshop designed for the University of Melbourne Capstone Project. It also includes scripts of different RL algorithms that were investigated, and their trianing and testing results.
 # Program
+![](https://github.com/JYL31/Nuturing-STEM-Robotics-and-RL/blob/main/Img/GUI.JPG)
+
 The GUI is developed using [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter), a python UI-library based on Tkinter that provides a more modern theme. 
 
 The GUI contains two tabs for the two OpenAI Gym environments that the agent could play. They are [Cart Pole](https://www.gymlibrary.dev/environments/classic_control/cart_pole/), and [Car Racing](https://www.gymlibrary.dev/environments/box2d/car_racing/). The GUI contains 7 functions in total:
