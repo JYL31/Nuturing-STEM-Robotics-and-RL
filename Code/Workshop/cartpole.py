@@ -98,11 +98,16 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = "euler"
         self.play = play
-        self.step_threshold = 200
+        if self.play:
+            self.step_threshold = 500
+            self.theta_threshold_radians = 20 * 2 * math.pi / 360
+            self.theta_termination_radians = 90 * 2 * math.pi / 360
+        else:
+            self.step_threshold = 200
+            self.theta_threshold_radians = 12 * 2 * math.pi / 360
+            self.theta_termination_radians = self.theta_threshold_radians
         self.count = 0
 
-        # Angle at which to fail the episode
-        self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
         
         self.episode = 0
@@ -113,7 +118,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             [
                 self.x_threshold * 2,
                 np.finfo(np.float32).max,
-                self.theta_threshold_radians * 2,
+                self.theta_termination_radians * 2,
                 np.finfo(np.float32).max,
             ],
             dtype=np.float32,
@@ -167,17 +172,31 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.state = (x, x_dot, theta, theta_dot)
 
         self.count += 1
-
-        terminated = bool(
-            x < -self.x_threshold
-            or x > self.x_threshold
-            or theta < -self.theta_threshold_radians
-            or theta > self.theta_threshold_radians
-            or self.count >= self.step_threshold
-        )
+        
+        if self.play:
+            terminated = bool(
+                x < -self.x_threshold
+                or x > self.x_threshold
+                or theta < -self.theta_termination_radians
+                or theta > self.theta_termination_radians
+                or self.count >= self.step_threshold
+            )
+        else:
+            terminated = bool(
+                x < -self.x_threshold
+                or x > self.x_threshold
+                or theta < -self.theta_threshold_radians
+                or theta > self.theta_threshold_radians
+                or self.count >= self.step_threshold
+            )
 
         if not terminated:
-            reward = 1.0
+            if self.play and theta > -self.theta_threshold_radians and theta < self.theta_threshold_radians:
+                reward = 1.0
+            elif self.play:
+                reward = 0.0
+            else:
+                reward = 1.0
         elif self.steps_beyond_terminated is None:
             # Pole just fell!
             self.steps_beyond_terminated = 0

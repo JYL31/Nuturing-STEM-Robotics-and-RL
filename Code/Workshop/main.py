@@ -14,10 +14,24 @@ if __name__ == '__main__':
     
     ctk.set_appearance_mode("Dark")
     ctk.set_default_color_theme("blue")    
+    
     root = ctk.CTk()
+    root.title("Basic GUI Layout with Grid")
+    root.maxsize(1500,  900)
+    root.resizable(0, 0)
+    
     plt.style.use('ggplot')
-    fig = Figure(figsize=(4.5,3),dpi=100)    
-    view = display(root, fig)
-    view.setup()
+    fig1 = Figure(figsize=(4.5,3),dpi=100)   
+    fig2 = Figure(figsize=(4.5,3),dpi=100) 
+    
+    tab = ctk.CTkTabview(root)
+    tab.pack()
+    cartpole = tab.add("Cartpole")
+    racing = tab.add("Car Racing")
+    
+    cartpole_view = display(cartpole, fig1, 0)
+    cartpole_view.setup()
+    racing_view = display(racing, fig2, 1)
+    racing_view.setup()
     
     root.mainloop()
