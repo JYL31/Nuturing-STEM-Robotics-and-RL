@@ -33,6 +33,7 @@ class display:
         self.create_widgets()
         self.setup_layout()  
 
+    # initialize buttons and plots
     def create_widgets(self):
         self.leftFrame = ctk.CTkFrame(self.container, width=100, height=780)
         self.midFrame = ctk.CTkFrame(self.container, width=300, height=780)
@@ -82,7 +83,8 @@ class display:
         
         self.buttons = [self.but_train, self.but_test, self.but_reset,
                         self.but_load, self.but_log, self.but_play, self.but_replay]
-        
+
+    # setup the layout for buttons and plots    
     def setup_layout(self):
         self.leftFrame.grid(row=0, column=0, padx=10, pady=5)
         self.midFrame.grid(row=0, column=1, padx=10, pady=5)
@@ -126,9 +128,11 @@ class display:
         
         self.label_txt.pack(side='top')
         self.txtbox.pack(side='bottom')
-                        
-    def load(self):
 
+    # function to load a previously trained agent                    
+    def load(self):
+        
+        # load network model and plot corresponding to the selected training parameters
         if self.tab == 0:
             data_no = random.randrange(0,3)
             name = "r{}_lr{}_{}".format(self.var_r.get(), self.var_lr.get(), data_no)
@@ -140,6 +144,8 @@ class display:
             self.model_plot = tk.PhotoImage(file = r'CarRacing\model_plot.png')
         
         reward_type = "angle difference" if self.var_r.get()==1 else "+1 each step"
+        
+        # print out the loading information
         verbose = "Loaded model with training parameters: \n\
             --Reward Engineering: {}\n\
             --Learning rate: {}\n".format(reward_type, self.var_lr.get())
@@ -150,11 +156,13 @@ class display:
         self.canvas_nn.create_image(172, 265, image=self.model_plot)
         self.canvas_nn.update()
         
+        # set buttons' states
         self.but_train.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
         self.but_test.configure(state="normal")
 
+    # function to delete an agent, reset buttons, and clear out plots and texts
     def reset(self):
         self.var_lr.set(value=0.001)
         if self.tab == 0:
@@ -177,20 +185,23 @@ class display:
         
         self.model = None
     
+    # function to update the cumulative reward over episode plot in real time
     def animate(self):
         self.ax.clear()
         self.ax.plot(self.rewards)
         plt.pause(0.5)
         self.canvas_plot.draw()
 
-    
+    # function to train the network
     def train_network(self):
         
+        # disable all interactables when training is in progress
         for i in self.buttons:
             i.configure(state="disabled")
         for i in self.radiobuttons:
             i.configure(state="disabled")
         
+        # delete previous plots and texts
         self.canvas_nn.delete("all")
         if hasattr(self, 'ax'):
             self.ax.clear()
@@ -203,6 +214,7 @@ class display:
         env_type = self.tab
         data_no = random.randrange(0,3)
 
+        # initialize the environment and an agent with the selected training parameter
         if env_type == 0:
             name = "r{}_lr{}_{}".format(self.var_r.get(), self.var_lr.get(), data_no)
             data_dir = "Cartpole/Logs/{}.csv".format(name)
@@ -220,12 +232,15 @@ class display:
                             (1, 0, 0), (0, 0, 0.5)]           #        (Steering Wheel, Gas, Break)
                                                               # Range        -1~1       0~1   0~1
             self.para = [self.var_lr.get(), data_no]
+        
+        # get the dataset of pre-recorded training
         data = pd.read_csv(data_dir)
         
         self.canvas_nn.create_image(172, 265, image=self.model_plot)
         self.canvas_nn.update()
         
         for episode in range(1, 101):
+            # reset the environment to a fixed seed so that pre-recorded dataset can be used to replay training
             if env_type == 0:
                 env.reset(seed=5)
             else:
@@ -239,7 +254,7 @@ class display:
                     action = episode_data["Action"].iloc[i]
                     if env_type == 1:
                         action = action_space[action]
-                        for j in range(3):
+                        for j in range(3): # skip 3 frames
                             _, _, terminal, _, _ = env.step(action)
                             if terminal:
                                 break
@@ -263,6 +278,7 @@ class display:
         self.txtbox.insert(tk.END, verbose)
         self.txtbox.update()
 
+        # reset buttons' states
         env.close()
         for i in self.buttons:
             if i != self.but_train:
@@ -270,7 +286,7 @@ class display:
         for i in self.radiobuttons:
             i.configure(state="normal")
 
-
+    # function to test the trained agent
     def test_network(self):
         for i in self.buttons:
             i.configure(state="disabled")
@@ -299,7 +315,7 @@ class display:
             state = cv2.cvtColor(state[0], cv2.COLOR_BGR2GRAY)
             state = state.astype(float)
             state /= 255.0
-            frame_stack = deque([state]*5, maxlen=5)
+            frame_stack = deque([state]*5, maxlen=5) # 5 stacks of image as state
             
         self.canvas_nn.create_image(172, 265, image=self.model_plot)
         self.canvas_nn.update()
@@ -307,20 +323,20 @@ class display:
         score = 0  
         while True:
             env.render()
-            if env_type == 0:
+            if env_type == 0: # Cartpole
                 action = np.argmax(self.model.predict(state, verbose=0))
                 state_next, reward, terminal, info, _ = env.step(action)
                 reward = -100*(abs(state_next[2]) - abs(state[0][2]))
                 state = np.reshape(state_next, [1, observation_space])
                 score += 1
-            else:
+            else: # Car Racing
                 cur_frame_stack = np.array(frame_stack)
                 cur_frame_stack = np.transpose(cur_frame_stack, (1, 2, 0))
                 cur_frame_stack = np.expand_dims(cur_frame_stack, axis=0)
                 action = np.argmax(self.model.predict(cur_frame_stack, verbose=0))
             
                 reward = 0
-                for i in range(3):
+                for i in range(3): # skip 3 frames
                     state_next, r, terminal, info, _ = env.step(action_space[action])
                     reward += r
                     if terminal:
@@ -352,7 +368,7 @@ class display:
         if hasattr(self, 'para')==False:
             self.but_replay.configure(state="disabled")
 
-    
+    # fucntion to open up a new window to visualize csv file content
     def open_csv(self):
         
         def destroy():
@@ -365,7 +381,7 @@ class display:
         self.table_window.resizable(0, 0)
         self.table_GUI = log_viewer(self.table_window)
     
-    
+    # function to play the environment using keyboard
     def manual_play(self):
         for i in self.buttons:
             i.configure(state="disabled")
@@ -401,7 +417,8 @@ class display:
         if self.model == None:
             self.but_test.configure(state="disabled")
             self.but_replay.configure(state="disabled")
-        
+
+    # function to replay a previous training episode specified by the entry box    
     def replay(self):
         for i in self.buttons:
             i.configure(state="disabled")

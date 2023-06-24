@@ -1,3 +1,11 @@
+"""
+Title: actor_critic_continuous source code
+Author: Phil Tabor
+Date: 2021
+Availability: https://github.com/philtabor/Youtube-Code-Repository/tree/master/ReinforcementLearning/PolicyGradient/SAC/tf2
+
+"""
+
 import numpy as np
 
 class ReplayBuffer:

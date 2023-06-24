@@ -34,7 +34,7 @@ class DQN_Agent:
         
         self.memory = deque(maxlen=int(memory_size))
         
-        # Deep Q learning network, input size is number of observation, output size is number of actions
+        # Convolution Neural Network
         self.model = Sequential()
         self.model.add(Conv2D(filters=6, kernel_size=(7, 7), strides=3, activation='relu', input_shape=(96,96,5)))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -74,33 +74,29 @@ class DQN_Agent:
             reward.append(batch[i][2])
             next_state[i] = batch[i][3]
             done.append(batch[i][4])
-        # do batch prediction to save speed
+        # batch prediction to get Q(s,a) and Q(s',a)
         target = self.model.predict(state, verbose=0)
         target_next = self.model.predict(next_state, verbose=0)
 
         for i in range(self.batch_size):
-            # correction on the Q value for the action used
+            # target Q-value
             if done[i]:
                 target[i][action[i]] = reward[i]
             else:
-                # Standard - DQN
-                # DQN chooses the max Q value among next actions
-                # selection and evaluation of action is on the target Q Network
-                # Q_max = max_a' Q_target(s', a')
+                # Bellman Equation
+                # Q*(s,a) = r + gamma * max(Q(s',a))
                 target[i][action[i]] = reward[i] + self.discount_factor * (np.amax(target_next[i]))
 
-        # Train the Neural Network with batches
+        # update the network
         self.model.fit(state, target, batch_size=self.batch_size, verbose=0)
         
+        # reduce exploration rate
         self.exploration_rate *= self.exploration_decay
         self.exploration_rate = max(0.01, self.exploration_rate)
     
 def train_network():
-    path = 'E:\Melb Uni\Capstone\Racing'
 
-    env = gym.wrappers.RecordVideo(CarRacing(continuous=True, render_mode='rgb_array'), 
-                                       video_folder=path, name_prefix='train', episode_trigger = lambda x: x % 2 == 0)
-    #env = CarRacing(continuous=True, render_mode='human')
+    env = CarRacing(continuous=True)
     
     observation_space = env.observation_space.shape
 
@@ -110,8 +106,6 @@ def train_network():
                                                       
     agent = DQN_Agent(observation_space, action_space)
     run = 0
-    #file = open('E:/Melb Uni/Capstone/Racing/results.csv', 'w', newline='')
-    #writer = csv.writer(file)
 
     while run < 100:
         run += 1
@@ -119,29 +113,28 @@ def train_network():
         state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
         state = state.astype(float)
         state /= 255.0
-        frame_stack = deque([state]*5, maxlen=5)
+        frame_stack = deque([state]*5, maxlen=5) # 5 stacks of image in consecutive frame as state
         total_rewards = 0
         while True:
-            #env.render()
             cur_frame_stack = np.array(frame_stack)
             cur_frame_stack = np.transpose(cur_frame_stack, (1, 2, 0))
             action = agent.policy(cur_frame_stack)
             
             reward = 0
-            for i in range(3):
+            for i in range(3): # skip 3 frames per action
                 state_next, r, terminal, info, car_pos = env.step(action_space[action])
                 reward += r
                 if terminal:
                     break
         
-            if action_space[action][1] == 1 and reward > 0:
+            if action_space[action][1] == 1 and reward > 0: # increase reward of acceleration to encourage full speed
                 reward = 1.2*reward
             total_rewards += reward
             
             state_next = cv2.cvtColor(state_next, cv2.COLOR_BGR2GRAY)
             state_next = state_next.astype(float)
             state_next /= 255.0
-            frame_stack.append(state_next)
+            frame_stack.append(state_next) # append image frame to state
             next_frame_stack = np.array(frame_stack)
             next_frame_stack = np.transpose(next_frame_stack, (1, 2, 0))
             
@@ -150,11 +143,10 @@ def train_network():
             if terminal or total_rewards < 0:
                 verbose = "Episodes: " + str(run) + ", Exploration: " + str(agent.exploration_rate) + ", Score: " + str(total_rewards) + '\n'
                 print(verbose)
-                #writer.writerow([agent.exploration_rate, total_rewards])
-                
                 break
+            
+            # update network
             agent.experience_replay()
-    #file.close()
 
 train_network()
 
